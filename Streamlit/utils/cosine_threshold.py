@@ -8,5 +8,5 @@ def cosine_decision(cosine_tensor, threshold: float):
     - pred_label = 0 → bona
     """
     value = float(cosine_tensor.squeeze().item())
-    pred = 1 if value < threshold else 0
+    pred = 1 if value > threshold else 0
     return value, pred

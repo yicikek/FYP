@@ -30,7 +30,7 @@ def load_models():
     # Shared encoder for D-MAD (loads S-MAD weights for better features)
     # 🔹 Build encoder exactly like training
     encoder = SharedEffB3Encoder(
-        weights_path="/workspaces/FYP/Streamlit/weights/efficientnet_b3_morphing.pth",
+        weights_path="/workspaces/FYP/Streamlit/weights/efficientnet_smad_finetuned.pth",
         freeze_backbone=False
     ).to(device)
 
@@ -184,7 +184,7 @@ if uploaded_id is not None and uploaded_selfie is not None:
     # -------------------------------
     st.subheader("🧩 Fused Decision")
 
-    if (morph_conf > bona_conf) or (cos_pred == 1):
+    if (morph_conf > bona_conf) and (cos_pred == 1):
         final_label = "❌ MORPH ATTACK DETECTED"
         st.error(final_label)
     else:
@@ -192,53 +192,36 @@ if uploaded_id is not None and uploaded_selfie is not None:
         st.success(final_label)
 
 
-    st.subheader("🔥 D-MAD Classifier Heatmap (ArcFace Head)")
-
-    t_id_cam = test_transform(img_id).unsqueeze(0).to(device)
-    t_id_cam.requires_grad_(True)
-# -------- Generate CAM --------
-    cam_map = grad_cam_dmad.generate(t_id_cam, class_idx=1)  # 1 = morph class
-
-    # Resize to image size
-    cam_resized = cv2.resize(cam_map, (img_id.width, img_id.height))
-    heatmap = cv2.applyColorMap(np.uint8(cam_resized * 255), cv2.COLORMAP_JET)
-    heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
-
-    # Overlay on original selfie
-    id_np = np.array(img_id).astype(np.float32)
-    overlay = (0.6 * id_np + 0.4 * heatmap).astype(np.uint8)
-
-    c1, c2 = st.columns(2)
-    with c1:
-        st.image(img_selfie, caption="Original Selfie")
-    with c2:
-        st.image(overlay, caption="Grad-CAM (D-MAD Classifier)")
 
 
    ############### 🔥 RUN GRAD-CAM ON S-MAD ###############
     st.subheader("🔥 Grad-CAM Heatmap (Hybrid Morphing Attack Detection)")
 
     # Make sure NOT to use no_grad() for S-MAD
-    t_selfie_cam = test_transform(img_selfie).unsqueeze(0).to(device)
-    t_selfie_cam.requires_grad_(True)
+    t_id_cam = test_transform(img_id).unsqueeze(0).to(device)
+    t_id_cam.requires_grad_(True)
 
     # Run S-MAD forward pass WITH gradients
-    smad_logits = smad_model(t_selfie_cam)
+    smad_logits = smad_model(t_id_cam)
 
     # 1 = morph class (change if reversed)
-    cam_map = grad_cam.generate(t_selfie_cam, class_idx=1)
+    cam_map = grad_cam.generate(t_id_cam, class_idx=1)
 
     # Resize CAM to selfie size
-    cam_resized = cv2.resize(cam_map, (img_selfie.width, img_selfie.height))
+    cam_resized = cv2.resize(cam_map, (img_id.width, img_id.height))
 
     # Convert to heatmap
     heatmap = cv2.applyColorMap((cam_resized * 255).astype("uint8"), cv2.COLORMAP_JET)
     heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
 
     # Overlay (0.6*image + 0.4*heatmap)
-    img_np = np.array(img_selfie).astype(np.flo
-                                         at32)
+    img_np = np.array(img_id).astype(np.float32)
     overlay = (0.6 * img_np + 0.4 * heatmap).astype(np.uint8)
 
     st.image(overlay, caption="S-MAD Grad-CAM Heatmap", use_container_width=True)
 
+    c1, c2 = st.columns(2)
+    with c1:
+        st.image(img_id, caption="Original Selfie")
+    with c2:
+        st.image(overlay, caption="S-MAD Grad-CAM Heatmap", use_container_width=True)
