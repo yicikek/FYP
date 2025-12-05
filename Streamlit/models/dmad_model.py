@@ -1,6 +1,9 @@
+# models/dmad_model.py
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 import math
 
 class ArcMarginProduct(nn.Module):
@@ -78,3 +81,20 @@ class DMAD_SiameseArcFace(nn.Module):
             logits = self.arcface(pair_embed, None)
 
         return logits, cosine_sim
+
+def contrastive_loss_cosine(cosine_sim, labels, margin=0.5):
+    """
+    labels: 0 (same/bonafide), 1 (different/morph)
+    cosine_sim: higher means more similar
+    """
+    # Convert labels to float
+    labels = labels.float()
+
+    # For genuine pairs (label=0) → want cosine_sim → 1
+    pos_loss = (1 - labels) * (1.0 - cosine_sim) ** 2
+
+    # For morph pairs (label=1) → want cosine_sim < margin
+    neg_loss = labels * torch.clamp(cosine_sim - margin, min=0) ** 2
+
+    loss = (pos_loss + neg_loss).mean()
+    return loss
