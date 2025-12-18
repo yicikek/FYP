@@ -22,6 +22,33 @@ import numpy as np
 # -------------------------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+PRE_MEAN = [0.485, 0.456, 0.406]
+PRE_STD  = [0.229, 0.224, 0.225]
+
+def denormalize(img_tensor):
+    mean = torch.tensor(PRE_MEAN).view(3,1,1).to(img_tensor.device)
+    std  = torch.tensor(PRE_STD).view(3,1,1).to(img_tensor.device)
+    return (img_tensor * std + mean).clamp(0,1)
+def make_overlay(cam, img_tensor, img_pil):
+    cam = cv2.resize(cam, (img_pil.width, img_pil.height))
+
+    img_denorm = denormalize(img_tensor[0])
+    img_denorm = img_denorm.permute(1,2,0).detach().cpu().numpy()
+    img_denorm = cv2.resize(img_denorm, (img_pil.width, img_pil.height))
+
+    heatmap = cv2.applyColorMap(
+        np.uint8(255 * cam),
+        cv2.COLORMAP_JET
+    )
+    heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB) / 255.0
+
+    overlay = np.clip(0.65 * heatmap + 0.35 * img_denorm, 0, 1)
+    return overlay
+
+
+
+
+
 # -------------------------------
 # 🔧 MODEL LOADING (CACHED)
 # -------------------------------
@@ -38,13 +65,12 @@ def load_models():
     dmad_model = DMAD_SiameseArcFace(
         encoder,
         embed_dim=512,
-        margin=0.5,
-        scale=30.0
+        id_fusion_weight=0.5
     ).to(device)
 
     # 🔹 Load D-MAD checkpoint (your trained weights)
     checkpoint = torch.load(
-        "/workspaces/FYP/Streamlit/weights/dmad_checkpoint_0.6 (1).pth",
+        "/workspaces/FYP/Streamlit/weights/dmad_checkpoint_Latest.pth",
         map_location=device,
         weights_only=False  # REQUIRED for PyTorch 2.6+
     )
@@ -122,8 +148,8 @@ with col2:
 st.sidebar.header("⚙️ Verification Settings")
 threshold = st.sidebar.slider(
     "Cosine Threshold (lower = more strict, morph if similarity < threshold)",
-    min_value=0.70,
-    max_value=0.99,
+    min_value=-1.00,
+    max_value=1.00,
     value=0.93,
     step=0.001,
 )
@@ -168,7 +194,7 @@ if uploaded_id is not None and uploaded_selfie is not None:
 
     col_a, col_b = st.columns(2)
     with col_a:
-        st.markdown("**Classifier (ArcFace Head)**")
+        st.markdown("**Classifier Evaluation**")
         st.write(f"- Bona-fide confidence: `{bona_conf:.4f}`")
         st.write(f"- Morph confidence:     `{morph_conf:.4f}`")
         st.write(f"- Predicted class:      `{'Morph' if cls_pred == 1 else 'Bona-fide'}`")
@@ -184,7 +210,10 @@ if uploaded_id is not None and uploaded_selfie is not None:
     # -------------------------------
     st.subheader("🧩 Fused Decision")
 
-    if (morph_conf > bona_conf) and (cos_pred == 1):
+    if cos_pred == 1:
+        final_label = "❌ MORPH ATTACK DETECTED"
+        st.error(final_label)
+    elif morph_conf > 0.7:   # optional safety margin
         final_label = "❌ MORPH ATTACK DETECTED"
         st.error(final_label)
     else:
@@ -194,34 +223,30 @@ if uploaded_id is not None and uploaded_selfie is not None:
 
 
 
-   ############### 🔥 RUN GRAD-CAM ON S-MAD ###############
-    st.subheader("🔥 Grad-CAM Heatmap (Hybrid Morphing Attack Detection)")
-
-    # Make sure NOT to use no_grad() for S-MAD
+    st.subheader("🔥 Grad-CAM Visualization (Paper Style)")
     t_id_cam = test_transform(img_id).unsqueeze(0).to(device)
+    t_selfie_cam = test_transform(img_selfie).unsqueeze(0).to(device)
+
     t_id_cam.requires_grad_(True)
+    t_selfie_cam.requires_grad_(True)
 
-    # Run S-MAD forward pass WITH gradients
-    smad_logits = smad_model(t_id_cam)
+    cam_id = grad_cam.generate(t_id_cam, class_idx=1)       # Morph CAM
+    cam_selfie = grad_cam.generate(t_selfie_cam, class_idx=1)
 
-    # 1 = morph class (change if reversed)
-    cam_map = grad_cam.generate(t_id_cam, class_idx=1)
+    overlay_id = make_overlay(cam_id, t_id_cam, img_id)
+    overlay_selfie = make_overlay(cam_selfie, t_selfie_cam, img_selfie)
 
-    # Resize CAM to selfie size
-    cam_resized = cv2.resize(cam_map, (img_id.width, img_id.height))
-
-    # Convert to heatmap
-    heatmap = cv2.applyColorMap((cam_resized * 255).astype("uint8"), cv2.COLORMAP_JET)
-    heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
-
-    # Overlay (0.6*image + 0.4*heatmap)
-    img_np = np.array(img_id).astype(np.float32)
-    overlay = (0.6 * img_np + 0.4 * heatmap).astype(np.uint8)
-
-    st.image(overlay, caption="S-MAD Grad-CAM Heatmap", use_container_width=True)
-
+        # -------- TOP ROW: Original Images --------
     c1, c2 = st.columns(2)
     with c1:
-        st.image(img_id, caption="Original Selfie")
+        st.image(img_id, caption="ID Image", use_container_width=True)
     with c2:
-        st.image(overlay, caption="S-MAD Grad-CAM Heatmap", use_container_width=True)
+        st.image(img_selfie, caption="Selfie Image", use_container_width=True)
+
+    # -------- BOTTOM ROW: Grad-CAM --------
+    c3, c4 = st.columns(2)
+    with c3:
+        st.image(overlay_id, caption="ID Grad-CAM", use_container_width=True)
+    with c4:
+        st.image(overlay_selfie, caption="Selfie Grad-CAM", use_container_width=True)
+

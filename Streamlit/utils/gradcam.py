@@ -20,9 +20,10 @@ class GradCAM:
         self._forward_hook = target_layer.register_forward_hook(
             self._forward_hook_fn
         )
-        self._backward_hook = target_layer.register_backward_hook(
+        self._backward_hook = target_layer.register_full_backward_hook(
             self._backward_hook_fn
         )
+
 
     # ---------- Hooks (now they use self correctly) ----------
     def _forward_hook_fn(self, module, input, output):
@@ -35,57 +36,36 @@ class GradCAM:
 
     # ---------- Main function ----------
     def generate(self, input_tensor, class_idx):
-        """
-        input_tensor : shape [1, 3, H, W], requires_grad=True
-        class_idx    : int, e.g. 0 = bonafide, 1 = morph
-        Returns: numpy 2D CAM map resized to input spatial size
-        """
-        # Make sure gradients are enabled
         input_tensor = input_tensor.requires_grad_(True)
-
-        # Put model in eval mode
         self.model.eval()
         self.model.zero_grad()
 
-        # Forward pass through S-MAD model
         output = self.model(input_tensor)
-
-        # In case model returns (logits, something_else)
-        if isinstance(output, tuple):
-            logits = output[0]
-        else:
-            logits = output
-
-        # Pick the logit for the target class
-        # logits shape: [B, num_classes]
+        logits = output[0] if isinstance(output, tuple) else output
         target = logits[:, class_idx].sum()
-
-        # Backward to get gradients wrt target_layer feature maps
         target.backward()
 
-        # Get stored activations and gradients
-        gradients = self.gradients          # [B, C, H, W]
-        activations = self.activations      # [B, C, H, W]
+        gradients = self.gradients           # [B,C,H,W]
+        activations = self.activations       # [B,C,H,W]
 
-        # Global average pooling over H, W → weights per channel
-        weights = gradients.mean(dim=(2, 3), keepdim=True)  # [B, C, 1, 1]
-
-        # Weighted sum of activations
-        cam = (weights * activations).sum(dim=1, keepdim=True)  # [B, 1, H, W]
+        weights = gradients.mean(dim=(2,3), keepdim=True)
+        cam = (weights * activations).sum(dim=1, keepdim=True)
         cam = F.relu(cam)
 
-        # Upsample CAM to input size
         cam = F.interpolate(
             cam,
-            size=input_tensor.shape[2:],  # (H, W)
+            size=input_tensor.shape[2:],
             mode="bilinear",
             align_corners=False,
         )
 
-        # Normalize 0–1
-        cam_min, cam_max = cam.min(), cam.max()
-        cam = (cam - cam_min) / (cam_max - cam_min + 1e-8)
+        # ✅ Paper-style normalization
+        cam = cam - cam.min()
+        cam = cam / (torch.quantile(cam, 0.99) + 1e-8)
+        cam = cam.clamp(0, 1)
 
-        # Return a 2D numpy map
-        cam_np = cam.detach().cpu().numpy()[0, 0]
-        return cam_np
+        # ✅ Smoothing
+        cam = F.avg_pool2d(cam, kernel_size=3, stride=1, padding=1)
+
+        return cam.detach().cpu().numpy()[0,0]
+
