@@ -155,37 +155,38 @@ threshold = st.sidebar.slider(
 )
 
 if uploaded_id is not None and uploaded_selfie is not None:
-    # -------------------------------
+
+     # -------------------------------
     # 🖼️ Load & show original images
     # -------------------------------
     img_id = Image.open(uploaded_id).convert("RGB")
     img_selfie = Image.open(uploaded_selfie).convert("RGB")
-
-    st.subheader("👀 Input Images")
-    c1, c2 = st.columns(2)
-    with c1:
-        st.image(img_id, caption="ID Image", use_container_width=True)
-    with c2:
-        st.image(img_selfie, caption="Selfie Image", use_container_width=True)
-
+    
     # -------------------------------
     # 🔄 Preprocess
     # -------------------------------
     t_id = test_transform(img_id).unsqueeze(0).to(device)
     t_selfie = test_transform(img_selfie).unsqueeze(0).to(device)
 
+    with torch.no_grad():
+        logits_id = smad_model(t_id)
+        probs_id = F.softmax(logits_id, dim=1)[0]
+
+    smad_bona = probs_id[0].item()
+    smad_morph = probs_id[1].item()
+
     # -------------------------------
     # 🚀 Run D-MAD model
     # -------------------------------
+    
     with torch.no_grad():
-        logits, cosine_sim = dmad_model(t_id, t_selfie)
+        _, cosine_sim = dmad_model(t_id, t_selfie)
 
-    probs = F.softmax(logits, dim=1)[0]
-    bona_conf = probs[0].item()
-    morph_conf = probs[1].item()
-    cls_pred = int(torch.argmax(probs).item())
-
+    # ✅ Use the SAME function as ipynb
     cos_val, cos_pred = cosine_decision(cosine_sim, threshold)
+
+    
+
 
     # -------------------------------
     # 📊 Show numeric results
@@ -194,15 +195,15 @@ if uploaded_id is not None and uploaded_selfie is not None:
 
     col_a, col_b = st.columns(2)
     with col_a:
-        st.markdown("**Classifier Evaluation**")
-        st.write(f"- Bona-fide confidence: `{bona_conf:.4f}`")
-        st.write(f"- Morph confidence:     `{morph_conf:.4f}`")
-        st.write(f"- Predicted class:      `{'Morph' if cls_pred == 1 else 'Bona-fide'}`")
+        st.markdown("🆔 S-MAD Result (ID Image)")
+        st.write(f"- Bona-fide probability: `{smad_bona:.4f}`")
+        st.write(f"- Morph probability: `{smad_morph:.4f}`")
+
 
     with col_b:
-        st.markdown("**Cosine Similarity (D-MAD Embeddings)**")
+        st.markdown("🔁 D-MAD Result (ID vs Selfie)")
         st.write(f"- Cosine similarity: `{cos_val:.4f}`")
-        st.write(f"- Threshold:         `{threshold:.4f}`")
+        st.write(f"- Threshold: `{threshold:.4f}`")
         st.write(f"- Cosine decision:   `{'Morph' if cos_pred == 1 else 'Bona-fide'}`")
 
     # -------------------------------
@@ -210,17 +211,23 @@ if uploaded_id is not None and uploaded_selfie is not None:
     # -------------------------------
     st.subheader("🧩 Fused Decision")
 
-    if cos_pred == 1:
-        final_label = "❌ MORPH ATTACK DETECTED"
-        st.error(final_label)
-    elif morph_conf > 0.7:   # optional safety margin
-        final_label = "❌ MORPH ATTACK DETECTED"
-        st.error(final_label)
+    SMAD_THRESHOLD = 0.5
+
+    if smad_morph > SMAD_THRESHOLD:
+        st.error("❌ REJECTED: ID image is a MORPH (S-MAD)")
+    elif cos_val < threshold:
+        st.error("❌ REJECTED: ID–Selfie mismatch (D-MAD)")
     else:
-        final_label = "✅ BONA-FIDE USER"
-        st.success(final_label)
+        st.success("✅ ACCEPTED: Bona-fide User")
 
+   
 
+    st.subheader("👀 Input Images")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.image(img_id, caption="ID Image", use_container_width=True)
+    with c2:
+        st.image(img_selfie, caption="Selfie Image", use_container_width=True)
 
 
     st.subheader("🔥 Grad-CAM Visualization (Paper Style)")
@@ -236,12 +243,6 @@ if uploaded_id is not None and uploaded_selfie is not None:
     overlay_id = make_overlay(cam_id, t_id_cam, img_id)
     overlay_selfie = make_overlay(cam_selfie, t_selfie_cam, img_selfie)
 
-        # -------- TOP ROW: Original Images --------
-    c1, c2 = st.columns(2)
-    with c1:
-        st.image(img_id, caption="ID Image", use_container_width=True)
-    with c2:
-        st.image(img_selfie, caption="Selfie Image", use_container_width=True)
 
     # -------- BOTTOM ROW: Grad-CAM --------
     c3, c4 = st.columns(2)
@@ -249,4 +250,3 @@ if uploaded_id is not None and uploaded_selfie is not None:
         st.image(overlay_id, caption="ID Grad-CAM", use_container_width=True)
     with c4:
         st.image(overlay_selfie, caption="Selfie Grad-CAM", use_container_width=True)
-
