@@ -57,7 +57,7 @@ def load_models():
     # Shared encoder for D-MAD (loads S-MAD weights for better features)
     # 🔹 Build encoder exactly like training
     encoder = SharedEffB3Encoder(
-        weights_path="/workspaces/FYP/Streamlit/weights/efficientnet_smad_finetuned.pth",
+        weights_path="/workspaces/FYP/Streamlit/weights/efficientnet_b3_morphing.pth",
         freeze_backbone=False
     ).to(device)
 
@@ -70,7 +70,7 @@ def load_models():
 
     # 🔹 Load D-MAD checkpoint (your trained weights)
     checkpoint = torch.load(
-        "/workspaces/FYP/Streamlit/weights/dmad_checkpoint_Latest.pth",
+        "/workspaces/FYP/Streamlit/weights/dmad_checkpoint_V2.pth",
         map_location=device,
         weights_only=False  # REQUIRED for PyTorch 2.6+
     )
