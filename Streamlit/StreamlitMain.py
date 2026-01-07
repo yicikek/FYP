@@ -35,7 +35,7 @@ st.markdown("""
     /* Style Sidebar Buttons to look like Nav Tabs */
     div[data-testid="stVerticalBlock"] div[data-testid="stButton"] > button {
         width: 100%;
-        border-radius: 8px;
+        border-radius: 5px;
         background-color: transparent;
         color: #e5e7eb;
         border: none;
@@ -158,7 +158,7 @@ def load_models():
  # S-MAD EfficientNet-B3
     smad_model = load_smad_model()
     ckpt_smad = torch.load(
-        "/workspaces/FYP/Streamlit/weights/efficientnet_smad_finetuned.pth",
+        "/workspaces/FYP/Streamlit/weights/Final_efficientnet_smad_finetuned.pth",
         map_location=device,
         weights_only=False,  # PyTorch 2.6 fix
     )
@@ -215,9 +215,9 @@ dmad_model, smad_model, grad_cam, grad_cam_dmad = load_models()
 st.sidebar.markdown("### 🔍 Detection Modes")
 
 modes = {
-    "Hybrid Mode": "Hybrid",
-    "S-MAD Only": "SMAD",
-    "D-MAD Only": "DMAD"
+    "Hybrid Morphing Attack Detection": "Hybrid",
+    "Single Morphing Attack Detection": "SMAD",
+    "Differential Morphing Attack Detection": "DMAD"
 }
 
 for label, key in modes.items():
@@ -234,18 +234,6 @@ for label, key in modes.items():
 if st.session_state.page == "Hybrid":
     st.title("🧩 Hybrid Face Morphing Attack Detection")
     st.write("Combined S-MAD and D-MAD analysis for maximum security.")
-
-    st.write(
-        """
-    Upload an **ID image** and a **selfie image**.
-
-    The system will:
-    - Compare them using your **D-MAD model** (classifier + cosine similarity)
-    - Show **bona vs morph confidence**
-    - Display **cosine similarity** and apply a threshold
-    - Generate a **heatmap** from the S-MAD model highlighting suspicious regions
-    """
-    )
 
     col1, col2 = st.columns(2)
     with col1:
@@ -289,7 +277,7 @@ if st.session_state.page == "Hybrid":
         # 📊 Show numeric results
         # -------------------------------
         st.subheader("📌 Model Outputs")
-        SMAD_THRESHOLD = 0.5
+        SMAD_THRESHOLD = 0.6
         col_a, col_b = st.columns(2)
         with col_a:
             st.markdown("🆔 S-MAD Result (ID Image)")
@@ -327,38 +315,63 @@ if st.session_state.page == "Hybrid":
 
         else:
             st.success("### ✅ ACCEPTED: Bona-fide User")
-            st.write("Both models confirm the identity as genuine.")
+            
     
 
-        # --- Input Images Section ---
-        st.subheader("👀 Input Images")
-        # Using spacers [left_spacer, img1, img2, right_spacer]
-        sp1, c1, c2, sp2 = st.columns([1, 2, 2, 1]) 
-        with c1:
-            st.image(img_id, caption="ID Image", use_container_width=True)
-        with c2:
-            st.image(img_selfie, caption="Selfie Image", use_container_width=True)
 
-        # --- Grad-CAM Processing ---
-        st.subheader("🔥 Grad-CAM Visualization")
-        t_id_cam = t_id.clone().detach().requires_grad_(True)
-        t_selfie_cam = t_selfie.clone().detach().requires_grad_(True)
+        if dmad_rejected:
+            st.subheader("🔥 Analysis of Suspicious Regions (Grad-CAM Visualization)")
 
-        # Using the fixed generate function from our previous step
-        cam_id = grad_cam_dmad.generate(t_id_cam, t_selfie_cam, class_idx=1)
-        cam_selfie = grad_cam_dmad.generate(t_selfie_cam, t_id_cam, class_idx=1)
+            # --- Grad-CAM Processing ---
+            t_id_cam = t_id.clone().detach().requires_grad_(True)
+            t_selfie_cam = t_selfie.clone().detach().requires_grad_(True)
 
-        overlay_id = make_overlay(cam_id, t_id_cam, img_id)
-        overlay_selfie = make_overlay(cam_selfie, t_selfie_cam, img_selfie)
+            # Using the fixed generate function from our previous step
+            cam_id = grad_cam_dmad.generate(t_id_cam, t_selfie_cam, class_idx=1)
+            cam_selfie = grad_cam_dmad.generate(t_selfie_cam, t_id_cam, class_idx=1)
 
-        # --- Grad-CAM Display (Smaller) ---
-        # Using the same spacer logic to keep it consistent
-        sp3, c3, c4, sp4 = st.columns([1, 2, 2, 1])
-        with c3:
-            st.image(overlay_id, caption="ID Grad-CAM", use_container_width=True)
-        with c4:
-            st.image(overlay_selfie, caption="Selfie Grad-CAM", use_container_width=True)
-                
+            overlay_id = make_overlay(cam_id, t_id_cam, img_id)
+            overlay_selfie = make_overlay(cam_selfie, t_selfie_cam, img_selfie)
+
+            # --- Grad-CAM Display (Smaller) ---
+            # Using the same spacer logic to keep it consistent
+            sp3, c3, c4, sp4 = st.columns([1, 2, 2, 1])
+            with c3:
+                st.image(overlay_id, caption="ID Grad-CAM", use_container_width=True)
+            with c4:
+                st.image(overlay_selfie, caption="Selfie Grad-CAM", use_container_width=True)
+
+        elif smad_rejected :
+            st.subheader("🔥 Analysis of Suspicious Regions (Grad-CAM Visualization)")
+
+            # --- Grad-CAM Processing ---
+            t_id_cam = t_id.clone().detach().requires_grad_(True)
+            t_selfie_cam = t_selfie.clone().detach().requires_grad_(True)
+
+            # Using the fixed generate function from our previous step
+            cam_id = grad_cam.generate(t_id_cam, class_idx=1)
+
+
+            overlay_id = make_overlay(cam_id, t_id_cam, img_id)
+
+
+            # --- Grad-CAM Display (Smaller) ---
+            # Using the same spacer logic to keep it consistent
+            sp3, c3, c4, sp4 = st.columns([1, 2, 2, 1])
+            with c3:
+                st.image(overlay_id, caption="ID Grad-CAM", use_container_width=True)
+
+        else:
+            st.subheader("👀 Input Images")
+            st.success("✅ Identity Verified. No suspicious artifacts detected.")
+            # Using spacers [left_spacer, img1, img2, right_spacer]
+            sp1, c1, c2, sp2 = st.columns([1, 2, 2, 1]) 
+            with c1:
+                st.image(img_id, caption="ID Image", use_container_width=True)
+            with c2:
+                st.image(img_selfie, caption="Selfie Image", use_container_width=True)
+
+           
 
 # --- S-MAD ONLY PAGE ---
 elif st.session_state.page == "SMAD":
@@ -375,7 +388,7 @@ elif st.session_state.page == "SMAD":
             probs = F.softmax(smad_model(t_id), dim=1)[0]
         
         morph_prob = probs[1].item()
-        is_morph = morph_prob > 0.5
+        is_morph = morph_prob > 0.7
 
         # 2. Result Banner
         if is_morph:
