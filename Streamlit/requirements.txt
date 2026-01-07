@@ -5,4 +5,3 @@ numpy
 pillow
 streamlit
 opencv-python-headless
-libgl1
