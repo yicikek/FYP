@@ -419,23 +419,7 @@ elif st.session_state.page == "DMAD":
     with col2:
         uploaded_selfie = st.file_uploader("📎 Upload Selfie", type=["jpg", "jpeg", "png"], key="dmad_selfie")
 
-    # 🔹 Load D-MAD checkpoint
-    checkpoint = torch.load(
-        "/workspaces/FYP/Streamlit/weights/Final_dmad_checkpoint.pth",
-        map_location=device,
-        weights_only=False
-    )
-
-    # 🛠️ FIX: Extract the weight dictionary if it's wrapped
-    if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
-        state_dict = checkpoint["model_state_dict"]
-    else:
-        state_dict = checkpoint
-
-    # Now load it into the model
-    dmad_model.load_state_dict(state_dict)
-    dmad_model.eval()
-
+    
     # In your UI logic:
     if uploaded_id and uploaded_selfie:
 
