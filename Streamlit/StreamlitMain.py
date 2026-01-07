@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from PIL import Image
 import numpy as np
 import cv2
+import os
 
 from models.shared_encoder import SharedEffB3Encoder
 from models.dmad_model import DMAD_SiameseArcFace
@@ -115,9 +116,7 @@ def make_overlay(cam, img_tensor, img_pil):
     overlay = np.clip(0.65 * heatmap + 0.35 * img_denorm, 0, 1)
     return overlay
 
-
-
-
+BASE_DIR = os.path.dirname(__file__) 
 
 # -------------------------------
 # 🔧 MODEL LOADING (CACHED)
@@ -127,7 +126,7 @@ def load_models():
     # Shared encoder for D-MAD (loads S-MAD weights for better features)
     # 🔹 Build encoder exactly like training
     encoder = SharedEffB3Encoder(
-        weights_path="/workspaces/FYP/Streamlit/weights/efficientnet_b3_morphing.pth",
+        weights_path = os.path.join(BASE_DIR, "weights", "efficientnet_b3_morphing.pth"),
         freeze_backbone=False
     ).to(device)
 
@@ -139,28 +138,27 @@ def load_models():
     ).to(device)
 
     # 🔹 Load D-MAD checkpoint (your trained weights)
+    dmad_path = os.path.join(BASE_DIR, "weights", "Final_dmad_checkpoint.pth")
     checkpoint = torch.load(
-        "/workspaces/FYP/Streamlit/weights/Final_dmad_checkpoint.pth",
+        dmad_path,
         map_location=device,
-        weights_only=False  # REQUIRED for PyTorch 2.6+
+        weights_only=False
     )
 
-    # 🔹 Some of your checkpoints are stored as {"model_state_dict": ...}
     if "model_state_dict" in checkpoint:
         dmad_model.load_state_dict(checkpoint["model_state_dict"])
     else:
         dmad_model.load_state_dict(checkpoint)
-
     dmad_model.eval()
     print("✔ D-MAD model loaded successfully")
 
-
- # S-MAD EfficientNet-B3
+    # 🔹 S-MAD EfficientNet-B3
     smad_model = load_smad_model()
+    smad_path = os.path.join(BASE_DIR, "weights", "Final_efficientnet_smad_finetuned.pth")
     ckpt_smad = torch.load(
-        "/workspaces/FYP/Streamlit/weights/Final_efficientnet_smad_finetuned.pth",
+        smad_path,
         map_location=device,
-        weights_only=False,  # PyTorch 2.6 fix
+        weights_only=False,
     )
 
     try:
@@ -174,11 +172,13 @@ def load_models():
     smad_model.to(device)
     smad_model.eval()
 
+    # 🔹 S-MAD Morphing model
     smad_model1 = load_smad_model()
+    smad1_path = os.path.join(BASE_DIR, "weights", "efficientnet_b3_morphing.pth")
     ckpt_smad1 = torch.load(
-        "/workspaces/FYP/Streamlit/weights/efficientnet_b3_morphing.pth",
+        smad1_path,
         map_location=device,
-        weights_only=False,  # PyTorch 2.6 fix
+        weights_only=False,
     )
 
     try:
