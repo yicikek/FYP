@@ -122,7 +122,7 @@ def load_models():
     ).to(device)
 
     # 🔹 Load D-MAD checkpoint (your trained weights)
-    dmad_path = os.path.join(BASE_DIR, "weights", "Final_dmad_checkpoint.pth")
+    dmad_path = os.path.join(BASE_DIR, "weights", "Final_dmad_checkpoint (1).pth")
     checkpoint = torch.load(
         dmad_path,
         map_location=device,
@@ -164,6 +164,18 @@ def load_models():
         map_location=device,
         weights_only=False,
     )
+    dmad_model1 = DMAD_SiameseArcFace(
+        encoder,
+        embed_dim=512,
+        id_fusion_weight=0.5
+    ).to(device)
+    dmad_path1 = os.path.join(BASE_DIR, "weights", "Final_dmad_checkpoint.pth")
+    checkpoint = torch.load(
+        dmad_path1,
+        map_location=device,
+        weights_only=False
+    )
+
 
     try:
         smad_model1.load_state_dict(ckpt_smad1)
@@ -184,7 +196,7 @@ def load_models():
     grad_cam_smad = GradCAM(smad_model1, target_layer)
 # Pick last conv layer of EfficientNet-B3 for CAM
     target_layer = dmad_model.encoder.features[6]
-    grad_cam_cls = GradCAMClassifier(dmad_model, target_layer)
+    grad_cam_cls = GradCAMClassifier(dmad_model1, target_layer)
 
 
     return dmad_model, smad_model, grad_cam_smad, grad_cam_cls
@@ -253,16 +265,16 @@ if st.session_state.page == "Intro":
         **Face Morphing Attacks** occur when two facial images are digitally blended to create a single image that biometrically resembles both individuals. 
         
         This allows:
-        - Two people to share one passport.
-        - Criminals to bypass border security using a "clean" person's identity.
-        - Serious vulnerabilities in e-Gate and biometric systems.
+        - Two people can share a single digital identity during eKYC verification.
+        - Criminals can bypass eKYC checks by using a morphed image based on a valid user’s identity.
+        - This creates serious security vulnerabilities in online onboarding, digital banking, and biometric verification systems.
         """)
 
     
         # You can add a conceptual image here if you have one
     st.info("""
         
-        **Project Goal:** To provide a transparent and robust detection system that combines texture analysis (S-MAD) with identity verification (D-MAD) to stop fraudulent document usage.
+        **Project Goal:** To build a clear and reliable system that combines texture analysis (S-MAD) and identity comparison(D-MAD) to detect face morphing attacks and prevent identity fraud..
         """)
 
    
@@ -338,7 +350,7 @@ if st.session_state.page == "Hybrid":
         
         with torch.no_grad():
             _, cosine_sim = dmad_model(t_id, t_selfie)
-        DMAD_THRESHOLD = 0.798
+        DMAD_THRESHOLD = 0.2496
         # ✅ Use the SAME function as ipynb
         cos_val, cos_pred = cosine_decision(cosine_sim, DMAD_THRESHOLD)
 
@@ -406,12 +418,19 @@ if st.session_state.page == "Hybrid":
             overlay_selfie = make_overlay(cam_selfie, t_selfie_cam, img_selfie)
 
             # --- Grad-CAM Display (Smaller) ---
-            # Using the same spacer logic to keep it consistent
-            sp3, c3, c4, sp4 = st.columns([1, 2, 2, 1])
-            with c3:
-                st.image(overlay_id, caption="ID Grad-CAM", use_container_width=True)
-            with c4:
-                st.image(overlay_selfie, caption="Selfie Grad-CAM", use_container_width=True)
+
+            sp1, col1, col2, sp2 = st.columns([1, 2, 2, 1])
+            with col1:
+                st.image(img_id, caption="Original ID Image", use_container_width=True)
+            with col2:
+                st.image(make_overlay(cam_id, t_id_cam, img_id), caption="ID Features")
+
+            # Bottom Row: Selfie Comparison
+            sp3, col3, col4, sp4 = st.columns([1, 2, 2, 1])
+            with col3:
+                st.image(img_selfie, caption="Original Selfie Image", use_container_width=True)
+            with col4:
+                st.image(make_overlay(cam_selfie, t_selfie_cam, img_selfie), caption="Selfie Features")
 
         elif smad_rejected :
             st.subheader("🔥 Analysis of Suspicious Regions (Grad-CAM Visualization)")
@@ -504,7 +523,7 @@ elif st.session_state.page == "DMAD":
         # 1. Calculate similarity
         with torch.no_grad():
             _, cos_sim = dmad_model(t_id, t_selfie)
-        cos_val, pred = cosine_decision(cos_sim, 0.798)
+        cos_val, pred = cosine_decision(cos_sim, 0.2496)
 
         # 4. Final Result Banner
         if pred == 1:
@@ -522,10 +541,19 @@ elif st.session_state.page == "DMAD":
 
         # 3. Small & Professional Layout
         st.subheader("🔥 Comparison Heatmaps")
-        spacer1, col1, col2, spacer2 = st.columns([0.5, 2, 2, 0.5]) # Makes them smaller
+        spacer1, col1, col2, spacer2 = st.columns([1, 2, 2, 1]) # Makes them smaller
+        
+        sp1, col1, col2, sp2 = st.columns([1, 2, 2, 1])
         with col1:
-            st.image(make_overlay(cam_id, t_id_cam, img_id), caption="ID Features")
+            st.image(img_id, caption="Original ID Image", use_container_width=True)
         with col2:
+            st.image(make_overlay(cam_id, t_id_cam, img_id), caption="ID Features")
+
+        # Bottom Row: Selfie Comparison
+        sp3, col3, col4, sp4 = st.columns([1, 2, 2, 1])
+        with col3:
+            st.image(img_selfie, caption="Original Selfie Image", use_container_width=True)
+        with col4:
             st.image(make_overlay(cam_selfie, t_selfie_cam, img_selfie), caption="Selfie Features")
 
-        
+                
