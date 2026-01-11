@@ -252,7 +252,7 @@ st.sidebar.info(f"**Device:** {device.type.upper()}")
 
 # --- INTRODUCTION PAGE ---
 if st.session_state.page == "Intro":
-    st.title("🛡️ Face Morphing Attack Detection System")
+    st.title("🛡️ Detecting Morphing Attack For Secure Digital Transaction")
     # The Subtitle (Your requested text)
     st.markdown("<h5 style='color: #000000; font-weight: 400; margin-top: -15px;'>A Hybrid Approach for Biometric Security</h5>", unsafe_allow_html=True)
 
