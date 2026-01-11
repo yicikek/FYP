@@ -25,64 +25,48 @@ if "page" not in st.session_state:
 
 st.markdown("""
 <style>
-    /* Dark Theme Backgrounds */
+    /* 🎨 Dynamic Backgrounds using Streamlit Variables */
     [data-testid="stSidebar"] {
-        background-color: #0b1220;
+        background-color: var(--secondary-background-color);
     }
     .stApp {
-        background-color: #0d1117;
+        background-color: var(--background-color);
     }
 
-    /* Style Sidebar Buttons to look like Nav Tabs */
+    /* 🧭 Sidebar Buttons (Navigation) */
     div[data-testid="stVerticalBlock"] div[data-testid="stButton"] > button {
         width: 100%;
-        border-radius: 5px;
+        border-radius: 8px;
         background-color: transparent;
-        color: #e5e7eb;
-        border: none;
+        color: var(--text-color); /* Dynamically changes black/white */
+        border: 1px solid rgba(128, 128, 128, 0.2);
         
-        /* Centering Logic */
         display: flex;
-        justify-content: center; /* Centers horizontally */
-        align-items: center;     /* Centers vertically */
-        text-align: center;      
-        
-        padding: 12px 15px;
-        font-weight: 500;
-        transition: all 0.3s;
-    }
-            
-    /* Active/Selected Styling (Optional: add a border or background for the active one) */
-    div[data-testid="stVerticalBlock"] div[data-testid="stButton"] > button:focus, 
-    div[data-testid="stVerticalBlock"] div[data-testid="stButton"] > button:active {
-        background-color: #1f2937;
-        color: white;
-        border: 1px solid #30363d;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 10px 10px;
+        margin-bottom: 5px;
+        transition: all 0.3s ease;
     }
 
-    /* Active/Hover Button Styling */
+    /* Hover & Active States */
     div[data-testid="stVerticalBlock"] div[data-testid="stButton"] > button:hover {
-        background-color: #1f2937;
-        color: white;
-    }
-            
-
-    /* Highlight Active Page (This is tricky in Streamlit, 
-       we'll handle it by applying a style if the session_state matches) */
-    
-    /* Center and Style Headers */
-    h1 {
-        text-align: left;
-        font-weight: 700;
-        color: #ffffff;
+        background-color: var(--secondary-background-color);
+        border-color: #ff4b4b; /* Streamlit Red accent */
+        color: #ff4b4b;
     }
 
-    /* File Uploader Container */
+    /* 📄 File Uploader Styling */
     [data-testid="stFileUploader"] {
-        background-color: #161b22;
-        border: 1px dashed #30363d;
+        background-color: var(--secondary-background-color);
+        border: 1px dashed rgba(128, 128, 128, 0.3);
         border-radius: 10px;
-        padding: 10px;
+    }
+
+    /* 🖋️ Ensure Headers are always visible */
+    h1, h2, h3 {
+        color: var(--text-color) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -209,26 +193,114 @@ def load_models():
 
 dmad_model, smad_model, grad_cam, grad_cam_dmad = load_models()
 
-# -------------------------------
-# 🧭 SIDEBAR NAVIGATION
-# -------------------------------
-st.sidebar.markdown("### 🔍 Detection Modes")
+with st.sidebar.expander("ℹ️ Project Information", expanded=False):
+    st.markdown("""
+    **Face Morphing Attack Detection**
+    
+    This system utilizes a **Hybrid Detection** approach to identify manipulated identity documents.
+    
+    * **S-MAD:** Analyzes single-image texture and digital artifacts.
+    * **D-MAD:** Compares ID images against live selfies for identity consistency.
+    * **Grad-CAM:** Provides explainable AI heatmaps of suspicious facial regions.
+    """)
+
+st.sidebar.divider()
+
+# 2. Page Navigation Buttons
+st.sidebar.markdown("### 📖 Main Menu")
 
 modes = {
+    "Project Introduction": "Intro",  # Added this line
     "Hybrid Morphing Attack Detection": "Hybrid",
     "Single Morphing Attack Detection": "SMAD",
     "Differential Morphing Attack Detection": "DMAD"
 }
 
+# Change the default page state at the top of your script if you want it to start here:
+if "page" not in st.session_state:
+    st.session_state.page = "Intro"
+
 for label, key in modes.items():
-    prefix = "🌟 " if st.session_state.page == key else "  "
+    # Highlight logic
+    is_active = st.session_state.page == key
+    prefix = "🌟 " if is_active else "  "
+    
     if st.sidebar.button(f"{prefix}{label}", key=f"btn_{key}"):
         st.session_state.page = key
         st.rerun()
 
+st.sidebar.divider()
+
+# 3. System Status (Bottom of Sidebar)
+st.sidebar.info(f"**Device:** {device.type.upper()}")
+
 # -------------------------------
 # 🖼️ PAGE CONTENT LOGIC
 # -------------------------------
+
+# --- INTRODUCTION PAGE ---
+if st.session_state.page == "Intro":
+    st.title("🛡️ Face Morphing Attack Detection System")
+    # The Subtitle (Your requested text)
+    st.markdown("<h5 style='color: #000000; font-weight: 400; margin-top: -15px;'>A Hybrid Approach for Biometric Security</h5>", unsafe_allow_html=True)
+
+    # Use columns for a professional "Key Features" look
+    
+    
+    
+    st.markdown("""
+        ### 🚨 Problem Statement & Goals
+        **Face Morphing Attacks** occur when two facial images are digitally blended to create a single image that biometrically resembles both individuals. 
+        
+        This allows:
+        - Two people to share one passport.
+        - Criminals to bypass border security using a "clean" person's identity.
+        - Serious vulnerabilities in e-Gate and biometric systems.
+        """)
+
+    
+        # You can add a conceptual image here if you have one
+    st.info("""
+        
+        **Project Goal:** To provide a transparent and robust detection system that combines texture analysis (S-MAD) with identity verification (D-MAD) to stop fraudulent document usage.
+        """)
+
+   
+
+    st.markdown("### 🛠️ Core Technologies")
+    
+    tab1, tab2, tab3 = st.tabs(["🔍 S-MAD", "🔁 D-MAD", "🔥 Explainability"])
+
+    with tab1:
+        st.markdown("""
+        #### Single-Image Morphing Attack Detection
+        - **Target:** Analyzes the ID image in isolation.
+        - **Method:** Uses **EfficientNet-B3** to detect microscopic digital artifacts, blending lines, and texture inconsistencies.
+        - **Strength:** Can flag a fake ID even without a reference image.
+        """)
+        
+
+    with tab2:
+        st.markdown("""
+        #### Differential Morphing Attack Detection
+        - **Target:** Compares the ID against a Live Selfie.
+        - **Method:** Uses a **Siamese Network with ArcFace Loss** to calculate identity similarity.
+        - **Strength:** Prevents identity mismatch by ensuring the person holding the ID is the same person pictured.
+        """)
+        
+
+    with tab3:
+        st.markdown("""
+        #### Explainable AI (Grad-CAM)
+        - **Purpose:** To remove the "Black Box" nature of AI.
+        - **Function:** Generates visual heatmaps highlighting the exact facial features (eyes, nose, mouth) the AI flagged as suspicious.
+        - **Benefit:** Allows human security officers to verify the AI's reasoning.
+        """)
+        
+
+    st.divider()
+    
+    st.button("🚀 Start Hybrid Detection", on_click=lambda: st.session_state.update({"page": "Hybrid"}))
 
 # --- HYBRID MODE PAGE ---
 if st.session_state.page == "Hybrid":
