@@ -206,7 +206,7 @@ def load_models():
     target_layer = smad_model1.features[6]
     grad_cam_smad = GradCAM(smad_model1, target_layer)
 # Pick last conv layer of EfficientNet-B3 for CAM
-    target_layer = dmad_model.encoder.features[7]
+    target_layer = dmad_model.encoder.features[6]
     grad_cam_cls = GradCAMClassifier(dmad_model1, target_layer)
 
 
