@@ -863,11 +863,11 @@ if st.session_state.page == "Hybrid":
         
         with c3:
             # Original Image (Already resized to 300, 400 earlier in your code)
-            st.image(img_id_resized, caption="Original ID Image", use_container_width=False)
+            st.image(img_id_resized, caption="Original ID Image", width="content")
             
         with c4:
             # New resized overlay
-            st.image(overlay_id_final, caption="ID Grad-CAM Analysis", use_container_width=False)
+            st.image(overlay_id_final, caption="ID Grad-CAM Analysis", width="content")
             
         st.write("D-MAD Analysis of Suspicious Regions")
         # --- Grad-CAM Processing ---
@@ -894,16 +894,16 @@ if st.session_state.page == "Hybrid":
         # Row 1: ID Comparison
         sp1, col1, col2, sp2 = st.columns([1.5, 2, 2, 1.5])
         with col1:
-            st.image(img_id_resized, caption="Original ID Image", use_container_width=False)
+            st.image(img_id_resized, caption="Original ID Image", width="content")
         with col2:
-            st.image(overlay_id_final, caption="ID Features", use_container_width=False)
+            st.image(overlay_id_final, caption="ID Features", width="content")
 
         # Row 2: Selfie Comparison
         sp3, col3, col4, sp4 = st.columns([1.5, 2, 2, 1.5])
         with col3:
-            st.image(img_selfie_resized, caption="Original Selfie Image", use_container_width=False)
+            st.image(img_selfie_resized, caption="Original Selfie Image", width="content")
         with col4:
-            st.image(overlay_selfie_final, caption="Selfie Features", use_container_width=False)
+            st.image(overlay_selfie_final, caption="Selfie Features", width="content")
 
 
         # else:
@@ -962,11 +962,11 @@ elif st.session_state.page == "SMAD":
         
         with c3:
             # Original Image (Already resized to 300, 400 earlier in your code)
-            st.image(img_id_resized, caption="Original ID Image", use_container_width=False)
+            st.image(img_id_resized, caption="Original ID Image", width="content")
             
         with c4:
             # New resized overlay
-            st.image(overlay_id_final, caption="ID Grad-CAM Analysis", use_container_width=False)
+            st.image(overlay_id_final, caption="ID Grad-CAM Analysis", width="content")
 
 
 # --- D-MAD ONLY PAGE ---
@@ -1031,16 +1031,16 @@ elif st.session_state.page == "DMAD":
         # Row 1: ID Comparison
         sp1, col1, col2, sp2 = st.columns([1.5, 2, 2, 1.5])
         with col1:
-            st.image(img_id_resized, caption="Original ID Image", use_container_width=False)
+            st.image(img_id_resized, caption="Original ID Image", width="content")
         with col2:
-            st.image(overlay_id_final, caption="ID Features", use_container_width=False)
+            st.image(overlay_id_final, caption="ID Features", width="content")
 
         # Row 2: Selfie Comparison
         sp3, col3, col4, sp4 = st.columns([1.5, 2, 2, 1.5])
         with col3:
-            st.image(img_selfie_resized, caption="Original Selfie Image", use_container_width=False)
+            st.image(img_selfie_resized, caption="Original Selfie Image", width="content")
         with col4:
-            st.image(overlay_selfie_final, caption="Selfie Features", use_container_width=False)
+            st.image(overlay_selfie_final, caption="Selfie Features", width="content")
 
 
                 
