@@ -113,6 +113,23 @@ def resize_fixed(img, size=(300, 400)):
 
 BASE_DIR = os.path.dirname(__file__) 
 
+import os
+import requests
+
+def download_model():
+    model_path = 'D-MAD/dmad_frll_stage1.pth'
+    url = 'YOUR_DIRECT_DOWNLOAD_LINK_HERE'
+    
+    if not os.path.exists(model_path):
+        print("Downloading model... this may take a minute.")
+        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+        response = requests.get(url, stream=True)
+        with open(model_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        print("Download complete!")
+
+download_model()
 # -------------------------------
 # 🔧 MODEL LOADING (CACHED)
 # -------------------------------
