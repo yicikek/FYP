@@ -107,6 +107,10 @@ def make_overlay(cam, img_tensor, img_pil):
     overlay = np.clip(0.65 * heatmap + 0.35 * img_denorm, 0, 1)
     return overlay
 
+def resize_fixed(img, size=(300, 400)):
+            """Resize image to fixed width & height"""
+            return img.resize(size, Image.Resampling.LANCZOS)
+
 BASE_DIR = os.path.dirname(__file__) 
 
 # -------------------------------
@@ -202,7 +206,7 @@ def load_models():
     target_layer = smad_model1.features[6]
     grad_cam_smad = GradCAM(smad_model1, target_layer)
 # Pick last conv layer of EfficientNet-B3 for CAM
-    target_layer = dmad_model.encoder.features[6]
+    target_layer = dmad_model.encoder.features[7]
     grad_cam_cls = GradCAMClassifier(dmad_model1, target_layer)
 
 
@@ -741,9 +745,7 @@ if st.session_state.page == "Hybrid":
             </style>
             """, unsafe_allow_html=True)
 
-        def resize_fixed(img, size=(300, 400)):
-            """Resize image to fixed width & height"""
-            return img.resize(size, Image.Resampling.LANCZOS)
+        
 
         img_id = Image.open(uploaded_id).convert("RGB")
         img_selfie = Image.open(uploaded_selfie).convert("RGB")
@@ -831,80 +833,80 @@ if st.session_state.page == "Hybrid":
             st.success("### ✅ ACCEPTED: Bona-fide User")
             
     
-        if dmad_rejected or smad_rejected:
-            st.subheader("🔥 Grad-CAM Visualization")
-            t_id_cam = t_id.clone().detach().requires_grad_(True)
-            t_selfie_cam = t_selfie.clone().detach().requires_grad_(True)
+    
+        st.subheader("🔥 Grad-CAM Visualization")
+        t_id_cam = t_id.clone().detach().requires_grad_(True)
+        t_selfie_cam = t_selfie.clone().detach().requires_grad_(True)
+        
+        st.write("S-MAD Analysis of Suspicious Regions")
+        
+        cam_id = grad_cam.generate(t_id_cam, class_idx=1)
+        
+        # 2. Create Overlay (Numpy array)
+        ov_id_np = make_overlay(cam_id, t_id_cam, img_id)
+
+        # 3. Convert Numpy to PIL & Resize (Fixes the TypeError)
+        # This ensures it matches the (300, 400) size of img_id_resized
+        ov_id_pil = Image.fromarray((ov_id_np * 255).astype(np.uint8))
+        overlay_id_final = resize_fixed(ov_id_pil, size=(300, 400))
+
+        # --- Grad-CAM Display (Small & Centered) ---
+        # Using 1.5 spacers to keep the images tight in the middle
+        sp3, c3, c4, sp4 = st.columns([1.5, 2, 2, 1.5])
+        
+        with c3:
+            # Original Image (Already resized to 300, 400 earlier in your code)
+            st.image(img_id_resized, caption="Original ID Image", use_container_width=False)
             
-            st.write("S-MAD Analysis of Suspicious Regions")
+        with c4:
+            # New resized overlay
+            st.image(overlay_id_final, caption="ID Grad-CAM Analysis", use_container_width=False)
             
-            cam_id = grad_cam.generate(t_id_cam, class_idx=1)
-            
-            # 2. Create Overlay (Numpy array)
-            ov_id_np = make_overlay(cam_id, t_id_cam, img_id)
+        st.write("D-MAD Analysis of Suspicious Regions")
+        # --- Grad-CAM Processing ---
+        
 
-            # 3. Convert Numpy to PIL & Resize (Fixes the TypeError)
-            # This ensures it matches the (300, 400) size of img_id_resized
-            ov_id_pil = Image.fromarray((ov_id_np * 255).astype(np.uint8))
-            overlay_id_final = resize_fixed(ov_id_pil, size=(300, 400))
+        # 1. Generate Raw Heatmaps (Numpy arrays)
+        cam_id = grad_cam_dmad.generate(t_id_cam, t_selfie_cam, class_idx=1)
+        cam_selfie = grad_cam_dmad.generate(t_selfie_cam, t_id_cam, class_idx=1)
 
-            # --- Grad-CAM Display (Small & Centered) ---
-            # Using 1.5 spacers to keep the images tight in the middle
-            sp3, c3, c4, sp4 = st.columns([1.5, 2, 2, 1.5])
-            
-            with c3:
-                # Original Image (Already resized to 300, 400 earlier in your code)
-                st.image(img_id_resized, caption="Original ID Image", use_container_width=False)
-                
-            with c4:
-                # New resized overlay
-                st.image(overlay_id_final, caption="ID Grad-CAM Analysis", use_container_width=False)
-                
-            st.write("D-MAD Analysis of Suspicious Regions")
-            # --- Grad-CAM Processing ---
-           
+        # 2. Create Overlays (Numpy arrays)
+        ov_id_np = make_overlay(cam_id, t_id_cam, img_id)
+        ov_selfie_np = make_overlay(cam_selfie, t_selfie_cam, img_selfie)
 
-            # 1. Generate Raw Heatmaps (Numpy arrays)
-            cam_id = grad_cam_dmad.generate(t_id_cam, t_selfie_cam, class_idx=1)
-            cam_selfie = grad_cam_dmad.generate(t_selfie_cam, t_id_cam, class_idx=1)
+        # 3. Convert Numpy to PIL & Resize (This fixes your TypeError)
+        # We wrap the numpy array in Image.fromarray so resize_fixed can work
+        ov_id_pil = Image.fromarray((ov_id_np * 255).astype(np.uint8))
+        ov_selfie_pil = Image.fromarray((ov_selfie_np * 255).astype(np.uint8))
+        
+        overlay_id_final = resize_fixed(ov_id_pil, size=(300, 400))
+        overlay_selfie_final = resize_fixed(ov_selfie_pil, size=(300, 400))
 
-            # 2. Create Overlays (Numpy arrays)
-            ov_id_np = make_overlay(cam_id, t_id_cam, img_id)
-            ov_selfie_np = make_overlay(cam_selfie, t_selfie_cam, img_selfie)
+        # --- Grad-CAM Display (Small & Centered) ---
+        
+        # Row 1: ID Comparison
+        sp1, col1, col2, sp2 = st.columns([1.5, 2, 2, 1.5])
+        with col1:
+            st.image(img_id_resized, caption="Original ID Image", use_container_width=False)
+        with col2:
+            st.image(overlay_id_final, caption="ID Features", use_container_width=False)
 
-            # 3. Convert Numpy to PIL & Resize (This fixes your TypeError)
-            # We wrap the numpy array in Image.fromarray so resize_fixed can work
-            ov_id_pil = Image.fromarray((ov_id_np * 255).astype(np.uint8))
-            ov_selfie_pil = Image.fromarray((ov_selfie_np * 255).astype(np.uint8))
-            
-            overlay_id_final = resize_fixed(ov_id_pil, size=(300, 400))
-            overlay_selfie_final = resize_fixed(ov_selfie_pil, size=(300, 400))
-
-            # --- Grad-CAM Display (Small & Centered) ---
-            
-            # Row 1: ID Comparison
-            sp1, col1, col2, sp2 = st.columns([1.5, 2, 2, 1.5])
-            with col1:
-                st.image(img_id_resized, caption="Original ID Image", use_container_width=False)
-            with col2:
-                st.image(overlay_id_final, caption="ID Features", use_container_width=False)
-
-            # Row 2: Selfie Comparison
-            sp3, col3, col4, sp4 = st.columns([1.5, 2, 2, 1.5])
-            with col3:
-                st.image(img_selfie_resized, caption="Original Selfie Image", use_container_width=False)
-            with col4:
-                st.image(overlay_selfie_final, caption="Selfie Features", use_container_width=False)
+        # Row 2: Selfie Comparison
+        sp3, col3, col4, sp4 = st.columns([1.5, 2, 2, 1.5])
+        with col3:
+            st.image(img_selfie_resized, caption="Original Selfie Image", use_container_width=False)
+        with col4:
+            st.image(overlay_selfie_final, caption="Selfie Features", use_container_width=False)
 
 
-        else:
-            st.success("✅ Identity Verified. No suspicious artifacts detected.")
-            # Using spacers [left_spacer, img1, img2, right_spacer]
-            sp1, c1, c2, sp2 = st.columns([1, 2, 2, 1]) 
-            with c1:
-                st.image(img_id, caption="ID Image", use_container_width=True)
-            with c2:
-                st.image(img_selfie, caption="Selfie Image", use_container_width=True)
+        # else:
+        #     st.success("✅ Identity Verified. No suspicious artifacts detected.")
+        #     # Using spacers [left_spacer, img1, img2, right_spacer]
+        #     sp1, c1, c2, sp2 = st.columns([1, 2, 2, 1]) 
+        #     with c1:
+        #         st.image(img_id, caption="ID Image", use_container_width=True)
+        #     with c2:
+        #         st.image(img_selfie, caption="Selfie Image", use_container_width=True)
 
            
 
@@ -917,7 +919,9 @@ elif st.session_state.page == "SMAD":
 
     if uploaded_id:
         img_id = Image.open(uploaded_id).convert("RGB")
-        t_id = test_transform(img_id).unsqueeze(0).to(device)
+        img_id_resized = resize_fixed(img_id, size=(300, 400))
+        t_id = test_transform(img_id_resized).unsqueeze(0).to(device)
+        
 
         with torch.no_grad():
             probs = F.softmax(smad_model(t_id), dim=1)[0]
@@ -933,14 +937,29 @@ elif st.session_state.page == "SMAD":
 
 
         # 1. Smaller Grad-CAM (using spacers)
-        st.subheader("🔥 Suspicious Region Heatmap")
+        st.subheader("🔥 SMAD Grad-CAM Visualization")
         t_id_cam = t_id.clone().detach().requires_grad_(True)
-        cam = grad_cam.generate(t_id_cam, class_idx=1)
-        overlay = make_overlay(cam, t_id_cam, img_id)
+        cam_id = grad_cam.generate(t_id_cam, class_idx=1)
         
-        col_left, col_mid, col_right = st.columns([1, 2, 1]) # Makes the middle column smaller
-        with col_mid:
-            st.image(overlay, caption="S-MAD Analysis", use_container_width=True)
+        # 2. Create Overlay (Numpy array)
+        ov_id_np = make_overlay(cam_id, t_id_cam, img_id)
+
+        # 3. Convert Numpy to PIL & Resize (Fixes the TypeError)
+        # This ensures it matches the (300, 400) size of img_id_resized
+        ov_id_pil = Image.fromarray((ov_id_np * 255).astype(np.uint8))
+        overlay_id_final = resize_fixed(ov_id_pil, size=(300, 400))
+
+        # --- Grad-CAM Display (Small & Centered) ---
+        # Using 1.5 spacers to keep the images tight in the middle
+        sp3, c3, c4, sp4 = st.columns([1.5, 2, 2, 1.5])
+        
+        with c3:
+            # Original Image (Already resized to 300, 400 earlier in your code)
+            st.image(img_id_resized, caption="Original ID Image", use_container_width=False)
+            
+        with c4:
+            # New resized overlay
+            st.image(overlay_id_final, caption="ID Grad-CAM Analysis", use_container_width=False)
 
 
 # --- D-MAD ONLY PAGE ---
@@ -960,9 +979,13 @@ elif st.session_state.page == "DMAD":
 
         img_id = Image.open(uploaded_id).convert("RGB")
         img_selfie = Image.open(uploaded_selfie).convert("RGB")
+
+        img_id_resized = resize_fixed(img_id, size=(300, 400))
+        img_selfie_resized = resize_fixed(img_selfie, size=(300, 400))
         
-        t_id = test_transform(img_id).unsqueeze(0).to(device)
-        t_selfie = test_transform(img_selfie).unsqueeze(0).to(device)
+        t_id = test_transform(img_id_resized).unsqueeze(0).to(device)
+        t_selfie = test_transform(img_selfie_resized).unsqueeze(0).to(device)
+
 
         # 1. Calculate similarity
         with torch.no_grad():
@@ -979,25 +1002,38 @@ elif st.session_state.page == "DMAD":
         t_id_cam = t_id.clone().detach().requires_grad_(True)
         t_selfie_cam = t_selfie.clone().detach().requires_grad_(True)
         
-        # Target the shared encoder to see features used for comparison
+        # 1. Generate Raw Heatmaps (Numpy arrays)
         cam_id = grad_cam_dmad.generate(t_id_cam, t_selfie_cam, class_idx=1)
         cam_selfie = grad_cam_dmad.generate(t_selfie_cam, t_id_cam, class_idx=1)
 
-        # 3. Small & Professional Layout
-        st.subheader("🔥 Comparison Heatmaps")
-        spacer1, col1, col2, spacer2 = st.columns([1, 2, 2, 1]) # Makes them smaller
-        
-        sp1, col1, col2, sp2 = st.columns([1, 2, 2, 1])
-        with col1:
-            st.image(img_id, caption="Original ID Image", use_container_width=True)
-        with col2:
-            st.image(make_overlay(cam_id, t_id_cam, img_id), caption="ID Features")
+        # 2. Create Overlays (Numpy arrays)
+        ov_id_np = make_overlay(cam_id, t_id_cam, img_id)
+        ov_selfie_np = make_overlay(cam_selfie, t_selfie_cam, img_selfie)
 
-        # Bottom Row: Selfie Comparison
-        sp3, col3, col4, sp4 = st.columns([1, 2, 2, 1])
+        # 3. Convert Numpy to PIL & Resize (This fixes your TypeError)
+        # We wrap the numpy array in Image.fromarray so resize_fixed can work
+        ov_id_pil = Image.fromarray((ov_id_np * 255).astype(np.uint8))
+        ov_selfie_pil = Image.fromarray((ov_selfie_np * 255).astype(np.uint8))
+        
+        overlay_id_final = resize_fixed(ov_id_pil, size=(300, 400))
+        overlay_selfie_final = resize_fixed(ov_selfie_pil, size=(300, 400))
+
+        # --- Grad-CAM Display (Small & Centered) ---
+        st.subheader("🔥 D-MAD Grad-CAM Visualization")
+        
+        # Row 1: ID Comparison
+        sp1, col1, col2, sp2 = st.columns([1.5, 2, 2, 1.5])
+        with col1:
+            st.image(img_id_resized, caption="Original ID Image", use_container_width=False)
+        with col2:
+            st.image(overlay_id_final, caption="ID Features", use_container_width=False)
+
+        # Row 2: Selfie Comparison
+        sp3, col3, col4, sp4 = st.columns([1.5, 2, 2, 1.5])
         with col3:
-            st.image(img_selfie, caption="Original Selfie Image", use_container_width=True)
+            st.image(img_selfie_resized, caption="Original Selfie Image", use_container_width=False)
         with col4:
-            st.image(make_overlay(cam_selfie, t_selfie_cam, img_selfie), caption="Selfie Features")
+            st.image(overlay_selfie_final, caption="Selfie Features", use_container_width=False)
+
 
                 
