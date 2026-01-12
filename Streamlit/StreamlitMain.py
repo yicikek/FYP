@@ -343,7 +343,17 @@ if st.session_state.page == "Intro":
             - Checks **identity consistency** between the two faces.
             - Detects morphs that still look similar to real people.
             """)
+       
+        st.markdown("### 🧩 Methodology Overview")
 
+        img_path = os.path.join(
+            os.path.dirname(__file__),
+            "assets",
+            "Methodology.png"
+        )
+
+        img = Image.open(img_path)
+        st.image(img, use_container_width=True) 
         
         st.button("🚀 Start Hybrid Detection", on_click=lambda: st.session_state.update({"page": "Hybrid"}))
 
