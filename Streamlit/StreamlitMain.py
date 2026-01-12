@@ -16,6 +16,25 @@ from utils.gradcam import GradCAM
 from utils.gradcam_classifier import GradCAMClassifier
 import cv2
 import numpy as np
+from huggingface_hub import hf_hub_download
+import torch
+
+# 1. Define your actual repo and filenames from the screenshot
+REPO_ID = "yckek/FYP" 
+ENB3_FILE = "efficientnet_b3_morphing.pth"
+DMAD_FILE = "Final_dmad_checkpoint (1) (1).pth"
+SMAD_FILE = "Final_efficientnet_smad_finetuned.pth"
+
+# 2. Function to download and return local paths
+def get_model_paths():
+    # Downloads and returns the path to the cached file
+    enb3_path = hf_hub_download(repo_id=REPO_ID, filename=ENB3_FILE)
+    dmad_path = hf_hub_download(repo_id=REPO_ID, filename=DMAD_FILE)
+    smad_path = hf_hub_download(repo_id=REPO_ID, filename=SMAD_FILE)
+    return enb3_path, dmad_path, smad_path
+
+# Get the paths
+enb3_weights_path, dmad_weights_path, smad_weights_path = get_model_paths()
 
 # -------------------------------
 # 🧠 PAGE STATE INIT (REQUIRED)
@@ -138,7 +157,7 @@ def load_models():
     # Shared encoder for D-MAD (loads S-MAD weights for better features)
     # 🔹 Build encoder exactly like training
     encoder = SharedEffB3Encoder(
-        weights_path = os.path.join(BASE_DIR, "weights", "efficientnet_b3_morphing.pth"),
+        weights_path=enb3_weights_path,
         freeze_backbone=False
     ).to(device)
 
@@ -150,12 +169,8 @@ def load_models():
     ).to(device)
 
     # 🔹 Load D-MAD checkpoint (your trained weights)
-    dmad_path = os.path.join(BASE_DIR, "weights", "Final_dmad_checkpoint (1).pth")
-    checkpoint = torch.load(
-        dmad_path,
-        map_location=device,
-        weights_only=False
-    )
+    
+    checkpoint = torch.load(dmad_weights_path, map_location=device)
 
     if "model_state_dict" in checkpoint:
         dmad_model.load_state_dict(checkpoint["model_state_dict"])
@@ -166,12 +181,7 @@ def load_models():
 
     # 🔹 S-MAD EfficientNet-B3
     smad_model = load_smad_model()
-    smad_path = os.path.join(BASE_DIR, "weights", "Final_efficientnet_smad_finetuned.pth")
-    ckpt_smad = torch.load(
-        smad_path,
-        map_location=device,
-        weights_only=False,
-    )
+    ckpt_smad = torch.load(smad_weights_path, map_location=device)
 
     try:
         smad_model.load_state_dict(ckpt_smad)
@@ -186,24 +196,9 @@ def load_models():
 
     # 🔹 S-MAD Morphing model
     smad_model1 = load_smad_model()
-    smad1_path = os.path.join(BASE_DIR, "weights", "efficientnet_b3_morphing.pth")
-    ckpt_smad1 = torch.load(
-        smad1_path,
-        map_location=device,
-        weights_only=False,
-    )
-    dmad_model1 = DMAD_SiameseArcFace(
-        encoder,
-        embed_dim=512,
-        id_fusion_weight=0.5
-    ).to(device)
-    dmad_path1 = os.path.join(BASE_DIR, "weights", "Final_dmad_checkpoint (1).pth")
-    checkpoint = torch.load(
-        dmad_path1,
-        map_location=device,
-        weights_only=False
-    )
-
+    
+    ckpt_smad1 = torch.load(enb3_weights_path, map_location=device)
+    
 
     try:
         smad_model1.load_state_dict(ckpt_smad1)
@@ -224,7 +219,7 @@ def load_models():
     grad_cam_smad = GradCAM(smad_model1, target_layer)
 # Pick last conv layer of EfficientNet-B3 for CAM
     target_layer = dmad_model.encoder.features[7]
-    grad_cam_cls = GradCAMClassifier(dmad_model1, target_layer)
+    grad_cam_cls = GradCAMClassifier(dmad_model, target_layer)
 
 
     return dmad_model, smad_model, grad_cam_smad, grad_cam_cls

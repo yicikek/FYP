@@ -5,3 +5,4 @@ numpy
 pillow
 streamlit
 opencv-python-headless
+huggingface_hub
