@@ -365,7 +365,7 @@ if st.session_state.page == "Intro":
         )
 
         img = Image.open(img_path)
-        st.image(img, use_container_width=True) 
+        st.image(img, width="stretch") 
         
         st.button("🚀 Start Hybrid Detection", on_click=lambda: st.session_state.update({"page": "Hybrid"}))
 
