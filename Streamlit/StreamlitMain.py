@@ -68,6 +68,13 @@ st.markdown("""
     h1, h2, h3 {
         color: var(--text-color) !important;
     }
+    
+    [data-testid="stHorizontalBlock"] [data-testid="column"] {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -169,7 +176,7 @@ def load_models():
         embed_dim=512,
         id_fusion_weight=0.5
     ).to(device)
-    dmad_path1 = os.path.join(BASE_DIR, "weights", "Final_dmad_checkpoint.pth")
+    dmad_path1 = os.path.join(BASE_DIR, "weights", "Final_dmad_checkpoint (1).pth")
     checkpoint = torch.load(
         dmad_path1,
         map_location=device,
@@ -222,7 +229,7 @@ st.sidebar.divider()
 st.sidebar.markdown("### 📖 Main Menu")
 
 modes = {
-    "Project Introduction": "Intro",  # Added this line
+    "Project Overview": "Intro",  # Added this line
     "Hybrid Morphing Attack Detection": "Hybrid",
     "Single Morphing Attack Detection": "SMAD",
     "Differential Morphing Attack Detection": "DMAD"
@@ -248,71 +255,461 @@ st.sidebar.info(f"**Device:** {device.type.upper()}")
 
 # -------------------------------
 # 🖼️ PAGE CONTENT LOGIC
-# -------------------------------
+
 
 # --- INTRODUCTION PAGE ---
 if st.session_state.page == "Intro":
     st.title("🛡️ Detecting Morphing Attack For Secure Digital Transaction")
-    # The Subtitle (Your requested text)
+        # The Subtitle (Your requested text)
     st.markdown("<h5 style='color: #000000; font-weight: 400; margin-top: -15px;'>A Hybrid Approach for Biometric Security</h5>", unsafe_allow_html=True)
-
     # Use columns for a professional "Key Features" look
-    
-    
-    
     st.markdown("""
-        ### 🚨 Problem Statement & Goals
-        **Face Morphing Attacks** occur when two facial images are digitally blended to create a single image that biometrically resembles both individuals. 
-        
-        This allows:
-        - Two people can share a single digital identity during eKYC verification.
-        - Criminals can bypass eKYC checks by using a morphed image based on a valid user’s identity.
-        - This creates serious security vulnerabilities in online onboarding, digital banking, and biometric verification systems.
-        """)
+    <div style="
+        background-color:#f1f5f9;
+        padding:14px 18px;
+        border-radius:8px;
+        font-size:15px;
+    ">
+    👩‍💻 <b>Prepared by:</b> Kek Yi Ci<br>
+    🎓 <b>Supervised by:</b> Dr Hoo Wai Lam
+    </div>
+    """, unsafe_allow_html=True)
 
-    
-        # You can add a conceptual image here if you have one
-    st.info("""
-        
-        **Project Goal:** To build a clear and reliable system that combines texture analysis (S-MAD) and identity comparison(D-MAD) to detect face morphing attacks and prevent identity fraud..
-        """)
 
-   
-
-    st.markdown("### 🛠️ Core Technologies")
-    
-    tab1, tab2, tab3 = st.tabs(["🔍 S-MAD", "🔁 D-MAD", "🔥 Explainability"])
-
+    tab1, tab2, tab3 = st.tabs(["📖 Overview", "📂 Dataset", "🧠 Modeling"])
     with tab1:
-        st.markdown("""
-        #### Single-Image Morphing Attack Detection
-        - **Target:** Analyzes the ID image in isolation.
-        - **Method:** Uses **EfficientNet-B3** to detect microscopic digital artifacts, blending lines, and texture inconsistencies.
-        - **Strength:** Can flag a fake ID even without a reference image.
-        """)
+
+            # ===== INTRODUCTION (FIRST 3 SLIDES) =====
+        st.markdown("### ❓ What is a Face Morphing Attack?")
+        st.markdown(
+            "A face morphing attack blends two or more individuals’ faces into a single composite image that can resemble multiple people."
+        )
+
         
+        # ===== TWO COLUMN: PROBLEM STATEMENT & OBJECTIVE =====
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### 🚨 Problem Statement")
+            st.markdown(
+                "- Traditional face recognition relies on surface similarity and misses subtle morphing artifacts.\n"
+                "- Existing S-MAD works on single images but cannot compare identity consistency.\n"
+                "- Existing D-MAD compares two images but struggles with pose, lighting, and expression variations."
+            )
+
+        with col2:
+            st.markdown("### 🎯 Project Objective")
+            st.markdown(
+                "To build a clear and reliable hybrid detection system that combines texture-based morph detection "
+                "(S-MAD) and identity comparison (D-MAD) to effectively prevent face morphing attacks in eKYC systems."
+            )
+        
+        st.markdown("### 📘 Key Concepts")
+
+        KCtab1, KCtab2, KCtab3, KCtab4 = st.tabs(["✅ Bonafide", "🎭 Morph", "🔍 S-MAD", "🔁 D-MAD"])
+
+        with KCtab1:
+            st.markdown("""
+            #### Bonafide Image
+            - A **genuine, unaltered facial image**.
+            - Represents **one real person**.
+            - Should always pass identity verification in eKYC systems.
+            """)
+
+        with KCtab2:
+            st.markdown("""
+            #### Morph Image
+            - Created by **blending two or more different faces** into one image.
+            - May look realistic but **does not represent a real person**.
+            - Can falsely match **multiple identities**, making it dangerous for eKYC.
+            """)
+
+        with KCtab3:
+            st.markdown("""
+            #### S-MAD (Single Morphing Attack Detection)
+            - Analyzes **only one image**, usually the ID photo.
+            - Detects **texture-level artifacts** caused by face blending.
+            - Effective even when **no selfie or reference image** is available.
+            """)
+
+        with KCtab4:
+            st.markdown("""
+            #### D-MAD (Differential Morphing Attack Detection)
+            - Compares **two images**: ID image and live selfie.
+            - Checks **identity consistency** between the two faces.
+            - Detects morphs that still look similar to real people.
+            """)
+
+        
+        st.button("🚀 Start Hybrid Detection", on_click=lambda: st.session_state.update({"page": "Hybrid"}))
 
     with tab2:
-        st.markdown("""
-        #### Differential Morphing Attack Detection
-        - **Target:** Compares the ID against a Live Selfie.
-        - **Method:** Uses a **Siamese Network with ArcFace Loss** to calculate identity similarity.
-        - **Strength:** Prevents identity mismatch by ensuring the person holding the ID is the same person pictured.
-        """)
+        # ===============================
+        # 📁 DATASET TAB
+        # ===============================
+
+        def resize_img(path, size=(400, 200)):
+            img = Image.open(path)
+            return img.resize(size)
+        
+        st.markdown("### 📁 Dataset Introduction")
+        st.markdown(
+            "Three facial datasets are used to train and evaluate the hybrid system, covering synthetic, controlled, and realistic face images for both S-MAD and D-MAD tasks."
+        )
+       
+
+        dataset_tab1, dataset_tab2, eda_tab = st.tabs([
+            "🔍 S-MAD Dataset (SMDD)",
+            "🔁 D-MAD Dataset (FEI & FRLL)",
+            "📊 EDA"
+        ])
+        st.divider()
+        # =========================================================
+        # 🔍 S-MAD TAB — SMDD DATASET
+        # =========================================================
+        with dataset_tab1:
+            st.markdown("### 📌 SMDD Dataset (Single-Image Morph Detection)")
+           
+            st.markdown("""
+            **SMDD (Single Morph Detection Dataset)** is used for training and evaluating  
+            the **S-MAD (Single-image Morphing Attack Detection)** model.
+            """)
+            col_smdd,col_non = st.columns(2)
+
+            with col_smdd:
+                img_path = os.path.join(BASE_DIR, "assets", "SMDD.png")
+                
+                img_smdd = Image.open(img_path)
+                st.image(img_smdd, caption="SMDD Dataset Example", use_container_width=True)    
+
+            st.markdown("#### 🧩 Dataset Characteristics")
+            st.markdown("""
+            - Provides **separate training and testing splits**
+            - Contains **bona-fide** and **synthetically generated morph images**
+            - Designed specifically for **single-image morph detection**
+            """)
+
+            st.markdown("#### 👤 Image Sources")
+            st.markdown("""
+            - Facial images collected from **publicly available biometric datasets**
+            - Images are **unaltered** and represent genuine identities
+        
+            """)
+
+            st.info(
+                "📌 The SMDD dataset enables the S-MAD model to learn intrinsic morphing artifacts "
+                "without relying on a reference image."
+            )
+
+        # =========================================================
+        # 🔁 D-MAD TAB — FEI + FRLL DATASETS
+        # =========================================================
+        with dataset_tab2:
+            st.subheader("📌 D-MAD Datasets (Differential Morph Detection)")
+
+            st.markdown("""
+            The **D-MAD (Differential Morphing Attack Detection)** model is trained and evaluated  
+            using **paired datasets**, allowing direct comparison between two facial images.
+            """)
+
+            # ---------------- FEI DATASET ----------------
+                        
+            st.markdown("### 1. FEI Dataset")
+            
+            col_FEI,col_non = st.columns(2)
+
+            with col_FEI:
+                img_path = os.path.join(BASE_DIR, "assets", "FEI_differentAngle.png")
+                
+                img_fei = Image.open(img_path)
+                st.image(img_fei, caption="FEI Face Dataset Example", use_container_width=True)    
+
+
+            fei_col1, fei_col2 = st.columns(2)
+
+            # ---- FEI Face Dataset ----
+            with fei_col1:
+                st.markdown("#### 🧑 FEI Face Dataset")
+                st.markdown("""
+                - Contains **200 subjects** with balanced gender distribution  
+                - Includes multiple **head pose variations**:
+                    - frontal  
+                    - rotated angles  
+                - Provides **neutral and smiling expressions**
+                """)
+
+            # ---- FEI Morph Dataset ----
+            with fei_col2:
+                st.markdown("#### 🔀 FEI Morph Dataset")
+                st.markdown("""
+                **Morphing Algorithms Used:**
+                - FaceFusion  
+                - UTW (Universal Triangle Warping)  
+                - NTNU Morphing Tool  
+
+                **Source Dataset:** FEI Face Dataset
+                """)
+
+            st.divider()
+
+            # =================================================
+            # FRLL DATASET (FACE vs MORPH)
+            # =================================================
+            st.markdown("### 2. FRLL Dataset")
+            col_FRLL,col_non = st.columns(2)
+
+            with col_FRLL:
+                img_path = os.path.join(BASE_DIR, "assets", "FRLL.png")
+                img_frll = Image.open(img_path)
+
+                st.image(img_frll, caption="FRLL Dataset Example", use_container_width=True) 
+
+            frll_col1, frll_col2 = st.columns(2)
+
+            # ---- FRLL Face Dataset ----
+            with frll_col1:
+                st.markdown("#### 🧑 FRLL Dataset (Face Research Lab London)")
+                st.markdown("""
+                - High-resolution facial images under **controlled lighting**  
+                - Multiple head poses (frontal and slight rotations)  
+                - Neutral and smiling expressions  
+                - Clean background with **highly detailed facial features**
+                """)
+
+            # ---- ASML / FRLL Morph Dataset ----
+            with frll_col2:
+                st.markdown("#### 🔀 ASML / FRLL Morph Dataset")
+                st.markdown("""
+                **Morphing Algorithms Used:**
+                - Landmark-based warping  
+                - Delaunay triangulation  
+                - Poisson blending  
+
+                **Source Dataset:** FRLL (Face Research Lab London)
+                """)
+            
+        with eda_tab:
+            st.header("📊 Exploratory Data Analysis (EDA)")
+            st.markdown(
+                "This section analyzes the **image resolution characteristics** of each dataset "
+                "to understand variability and preprocessing requirements before training."
+            )
+            # =================================================
+            # SMDD EDA
+            # =================================================
+            st.subheader("📌 SMDD Dataset")
+
+            img_smdd = Image.open(os.path.join(BASE_DIR, "assets", "EDA_SMDD.png"))
+            st.image(img_smdd, use_container_width=True)
+
+            st.markdown("""
+            **Observations:**
+            - Images have **uniform resolution** (approximately 256 × 256 pixels)
+            - Dataset is **highly standardized**
+            - No major resizing issues are expected
+            """)
+            st.divider()
+            # =================================================
+            # FEI EDA
+            # =================================================
+            st.subheader("📌 FEI Dataset")
+
+            img_fei = Image.open(os.path.join(BASE_DIR, "assets", "EDA_FEI.png"))
+            st.image(img_fei, use_container_width=True)
+
+            st.markdown("""
+            **Observations:**
+            - Large variation in image resolution
+            - Multiple clusters of widths and heights
+            - **Resizing and normalization are required** before training
+            """)
+
+            st.divider()
+            # =================================================
+            # FRLL EDA
+            # =================================================
+            st.subheader("📌 FRLL Dataset")
+
+            img_frll = Image.open(os.path.join(BASE_DIR, "assets", "EDA_FRLL.png"))
+            st.image(img_frll, use_container_width=True)
+
+            st.markdown("""
+            **Observations:**
+            - Images are generally **high-resolution** (around 1300 × 1300 pixels)
+            - Minimal variation in width and height
+            - Indicates a **clean and controlled dataset**
+            """)
+
+    with tab3 :
+        st.markdown("### 🧠 Modelling Overview")
+
+        col_mod, col_Non = st.columns(2)
+        with col_mod:
+            img_path = os.path.join(BASE_DIR, "assets", "Modelling.png")
+            img_frll = Image.open(img_path)
+
+            st.image(img_frll, caption="Modelling Flowchart", use_container_width=True) 
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### 📌 Stage 1: Train S-MAD")
+            st.markdown("""
+            ✅ **Objective:** Detect visual morphing artifacts from a single image  
+
+            - Backbone: **EfficientNet-B3**
+            - Learns **low-level texture & blending artifacts**
+            - Trained with a **single-image classifier head**
+            - Dataset: **SMDD**
+            - Output: Probability of morph vs bona-fide
+            """)
+
+        with col2:
+            st.markdown("### 📌 Stage 2: Train D-MAD")
+            st.markdown("""
+            ✅ **Objective:** Detect identity inconsistencies between two face images  
+
+            - Reuses **encoder from Stage 1**
+            - Siamese network with **shared weights**
+            - Uses **angular embedding + cosine similarity**
+            - Dataset: **FEI Morph + FRLL**
+            - Output: Similarity score for morph decision
+                        
+            """)
         
 
-    with tab3:
-        st.markdown("""
-        #### Explainable AI (Grad-CAM)
-        - **Purpose:** To remove the "Black Box" nature of AI.
-        - **Function:** Generates visual heatmaps highlighting the exact facial features (eyes, nose, mouth) the AI flagged as suspicious.
-        - **Benefit:** Allows human security officers to verify the AI's reasoning.
-        """)
-        
+        st.markdown("#### 🧠 Model Used")
 
-    st.divider()
-    
-    st.button("🚀 Start Hybrid Detection", on_click=lambda: st.session_state.update({"page": "Hybrid"}))
+        tab1, tab2, tab3 = st.tabs([
+            "⚙️ EfficientNet-B3",
+            "🔁 Dual-Head Siamese Network",
+            "📐 Angular Embedding + Cosine Similarity"
+        ])
+
+        # -------------------------------
+        # TAB 1: EfficientNet-B3
+        # -------------------------------
+        with tab1:
+
+            st.markdown(
+                "**EfficientNet-B3** is used as the backbone feature extractor in this system."
+            )
+
+            col1, col2 = st.columns(2)
+
+            # ---------------- LEFT COLUMN ----------------
+            with col1:
+                st.markdown("#### Why EfficientNet-B3 is used:")
+                st.markdown("""
+                - Balances **accuracy** and **computational efficiency**
+                - Learns strong **facial texture and structural features**
+                - Pretrained on **ImageNet**, allowing faster convergence
+                """)
+
+            # ---------------- RIGHT COLUMN ----------------
+            with col2:
+                st.markdown("#### How it is used in this system:")
+                st.markdown("""
+                - Acts as a **shared encoder** for both **S-MAD** and **D-MAD**
+                - Extracts facial **embeddings** from input images
+                - Provides **consistent feature representations** across datasets
+                """)
+
+            st.markdown("#### ✅ Key Benefit")
+            st.markdown(
+                "High-quality feature extraction with **low computational cost**."
+            )
+
+        # -------------------------------
+        # TAB 2: Dual-Head Siamese Network
+        # -------------------------------
+        with tab2:
+            st.markdown(
+                "A **Siamese Network** processes two facial images using the **same shared encoder** "
+                "and compares their embeddings."
+            )
+
+            col1, col2 = st.columns(2)
+
+            # ---------------- LEFT COLUMN ----------------
+            with col1:
+                st.markdown("#### Why Dual-Head Siamese Network is used:")
+                st.markdown("""
+                - A single embedding struggles to learn both **identity** and **morph cues**
+                - Dual-head design **separates learning objectives**
+                - Improves stability and task-specific learning
+                """)
+
+                st.markdown("#### Two Heads in the Network:")
+                st.markdown("""
+                **Artifact Head**
+                - Focuses on detecting **morphing artifacts**
+                - Captures blending inconsistencies
+                
+                **Identity Head**
+                - Maintains **compact embeddings** for genuine identities
+                - Stabilizes representation of bona-fide pairs
+                """)
+
+            # ---------------- RIGHT COLUMN ----------------
+            with col2:
+                st.markdown("#### How it works:")
+                st.markdown("""
+                - ID image and selfie are passed through the **same encoder**
+                - Each head learns a **different task**
+                - Reduces conflict between identity recognition and morph detection
+                """)
+
+                st.markdown("#### ✅ Key Benefit")
+                st.markdown(
+                    "Produces more **stable**, **interpretable**, and **discriminative embeddings**."
+                )
+
+        # -------------------------------
+        # TAB 3: Angular Embedding + Cosine Similarity
+        # -------------------------------
+        with tab3:
+            st.markdown(
+                "The model uses **angular embeddings inspired by ArcFace** together with "
+                "**cosine similarity** for face pair comparison."
+            )
+
+            col1, col2 = st.columns(2)
+
+            # ---------------- LEFT COLUMN ----------------
+            with col1:
+                st.markdown("#### Why Angular Embedding is used:")
+                st.markdown("""
+                - Encourages **clear separation** between identities in angular space  
+                - Produces **compact clusters** for bona fide identities  
+                - Pushes morph embeddings away from genuine identity clusters  
+                """)
+
+                st.markdown("#### Why Cosine Similarity is used:")
+                st.markdown("""
+                - Measures similarity based on **angular distance**  
+                - **Stable and scale-independent**  
+                - Suitable for **threshold-based decisions**  
+                """)
+
+            # ---------------- RIGHT COLUMN ----------------
+            with col2:
+                st.markdown("#### Decision Logic:")
+                st.markdown("""
+                - **High cosine similarity** → Bona fide pair  
+                - **Low cosine similarity** → Morph attack  
+                """)
+
+                st.markdown("#### ✅ Key Benefit")
+                st.markdown(
+                    "Enables **robust and consistent morph detection** across different datasets."
+                )
+
+
+
+            
+
+            
 
 # --- HYBRID MODE PAGE ---
 if st.session_state.page == "Hybrid":
@@ -322,20 +719,53 @@ if st.session_state.page == "Hybrid":
     col1, col2 = st.columns(2)
     with col1:
         uploaded_id = st.file_uploader("📎 Upload ID Image", type=["jpg", "jpeg", "png"], key="hybrid_id")
+
     with col2:
         uploaded_selfie = st.file_uploader("📎 Upload Selfie Image", type=["jpg", "jpeg", "png"], key="hybrid_selfie")
 
+
     if uploaded_id and uploaded_selfie:
         # 🖼️ Load & show original images
-
+        
         img_id = Image.open(uploaded_id).convert("RGB")
         img_selfie = Image.open(uploaded_selfie).convert("RGB")
         
+        
+        st.markdown("""
+            <style>
+            /* Centers images globally within their containers */
+            [data-testid="stImage"] {
+                display: flex;
+                justify-content: center;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
+        def resize_fixed(img, size=(300, 400)):
+            """Resize image to fixed width & height"""
+            return img.resize(size, Image.Resampling.LANCZOS)
+
+        img_id = Image.open(uploaded_id).convert("RGB")
+        img_selfie = Image.open(uploaded_selfie).convert("RGB")
+
+        # Force same size
+        img_id_resized = resize_fixed(img_id, size=(300, 400))
+        img_selfie_resized = resize_fixed(img_selfie, size=(300, 400))
+
+        col3, col4 = st.columns(2)
+
+        with col3:
+            st.markdown("<h4>🆔 ID Document</h4>", unsafe_allow_html=True)
+            st.image(img_id_resized, caption="Original ID Image")
+
+        with col4:
+            st.markdown("<h4>🤳 Live Selfie</h4>", unsafe_allow_html=True)
+            st.image(img_selfie_resized, caption="Original Selfie Image")
         # -------------------------------
         # 🔄 Preprocess
         # -------------------------------
-        t_id = test_transform(img_id).unsqueeze(0).to(device)
-        t_selfie = test_transform(img_selfie).unsqueeze(0).to(device)
+        t_id = test_transform(img_id_resized).unsqueeze(0).to(device)
+        t_selfie = test_transform(img_selfie_resized).unsqueeze(0).to(device)
 
         with torch.no_grad():
             logits_id = smad_model(t_id)
@@ -401,59 +831,73 @@ if st.session_state.page == "Hybrid":
             st.success("### ✅ ACCEPTED: Bona-fide User")
             
     
-
-
-        if dmad_rejected:
-            st.subheader("🔥 Analysis of Suspicious Regions (Grad-CAM Visualization)")
-
-            # --- Grad-CAM Processing ---
+        if dmad_rejected or smad_rejected:
+            st.subheader("🔥 Grad-CAM Visualization")
             t_id_cam = t_id.clone().detach().requires_grad_(True)
             t_selfie_cam = t_selfie.clone().detach().requires_grad_(True)
+            
+            st.write("S-MAD Analysis of Suspicious Regions")
+            
+            cam_id = grad_cam.generate(t_id_cam, class_idx=1)
+            
+            # 2. Create Overlay (Numpy array)
+            ov_id_np = make_overlay(cam_id, t_id_cam, img_id)
 
-            # Using the fixed generate function from our previous step
+            # 3. Convert Numpy to PIL & Resize (Fixes the TypeError)
+            # This ensures it matches the (300, 400) size of img_id_resized
+            ov_id_pil = Image.fromarray((ov_id_np * 255).astype(np.uint8))
+            overlay_id_final = resize_fixed(ov_id_pil, size=(300, 400))
+
+            # --- Grad-CAM Display (Small & Centered) ---
+            # Using 1.5 spacers to keep the images tight in the middle
+            sp3, c3, c4, sp4 = st.columns([1.5, 2, 2, 1.5])
+            
+            with c3:
+                # Original Image (Already resized to 300, 400 earlier in your code)
+                st.image(img_id_resized, caption="Original ID Image", use_container_width=False)
+                
+            with c4:
+                # New resized overlay
+                st.image(overlay_id_final, caption="ID Grad-CAM Analysis", use_container_width=False)
+                
+            st.write("D-MAD Analysis of Suspicious Regions")
+            # --- Grad-CAM Processing ---
+           
+
+            # 1. Generate Raw Heatmaps (Numpy arrays)
             cam_id = grad_cam_dmad.generate(t_id_cam, t_selfie_cam, class_idx=1)
             cam_selfie = grad_cam_dmad.generate(t_selfie_cam, t_id_cam, class_idx=1)
 
-            overlay_id = make_overlay(cam_id, t_id_cam, img_id)
-            overlay_selfie = make_overlay(cam_selfie, t_selfie_cam, img_selfie)
+            # 2. Create Overlays (Numpy arrays)
+            ov_id_np = make_overlay(cam_id, t_id_cam, img_id)
+            ov_selfie_np = make_overlay(cam_selfie, t_selfie_cam, img_selfie)
 
-            # --- Grad-CAM Display (Smaller) ---
+            # 3. Convert Numpy to PIL & Resize (This fixes your TypeError)
+            # We wrap the numpy array in Image.fromarray so resize_fixed can work
+            ov_id_pil = Image.fromarray((ov_id_np * 255).astype(np.uint8))
+            ov_selfie_pil = Image.fromarray((ov_selfie_np * 255).astype(np.uint8))
+            
+            overlay_id_final = resize_fixed(ov_id_pil, size=(300, 400))
+            overlay_selfie_final = resize_fixed(ov_selfie_pil, size=(300, 400))
 
-            sp1, col1, col2, sp2 = st.columns([1, 2, 2, 1])
+            # --- Grad-CAM Display (Small & Centered) ---
+            
+            # Row 1: ID Comparison
+            sp1, col1, col2, sp2 = st.columns([1.5, 2, 2, 1.5])
             with col1:
-                st.image(img_id, caption="Original ID Image", use_container_width=True)
+                st.image(img_id_resized, caption="Original ID Image", use_container_width=False)
             with col2:
-                st.image(make_overlay(cam_id, t_id_cam, img_id), caption="ID Features")
+                st.image(overlay_id_final, caption="ID Features", use_container_width=False)
 
-            # Bottom Row: Selfie Comparison
-            sp3, col3, col4, sp4 = st.columns([1, 2, 2, 1])
+            # Row 2: Selfie Comparison
+            sp3, col3, col4, sp4 = st.columns([1.5, 2, 2, 1.5])
             with col3:
-                st.image(img_selfie, caption="Original Selfie Image", use_container_width=True)
+                st.image(img_selfie_resized, caption="Original Selfie Image", use_container_width=False)
             with col4:
-                st.image(make_overlay(cam_selfie, t_selfie_cam, img_selfie), caption="Selfie Features")
+                st.image(overlay_selfie_final, caption="Selfie Features", use_container_width=False)
 
-        elif smad_rejected :
-            st.subheader("🔥 Analysis of Suspicious Regions (Grad-CAM Visualization)")
-
-            # --- Grad-CAM Processing ---
-            t_id_cam = t_id.clone().detach().requires_grad_(True)
-            t_selfie_cam = t_selfie.clone().detach().requires_grad_(True)
-
-            # Using the fixed generate function from our previous step
-            cam_id = grad_cam.generate(t_id_cam, class_idx=1)
-
-
-            overlay_id = make_overlay(cam_id, t_id_cam, img_id)
-
-
-            # --- Grad-CAM Display (Smaller) ---
-            # Using the same spacer logic to keep it consistent
-            sp3, c3, c4, sp4 = st.columns([1, 2, 2, 1])
-            with c3:
-                st.image(overlay_id, caption="ID Grad-CAM", use_container_width=True)
 
         else:
-            st.subheader("👀 Input Images")
             st.success("✅ Identity Verified. No suspicious artifacts detected.")
             # Using spacers [left_spacer, img1, img2, right_spacer]
             sp1, c1, c2, sp2 = st.columns([1, 2, 2, 1]) 
