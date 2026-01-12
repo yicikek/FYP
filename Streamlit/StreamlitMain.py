@@ -24,9 +24,12 @@ REPO_ID = "yckek/FYP"
 ENB3_FILE = "efficientnet_b3_morphing.pth"
 DMAD_FILE = "Final_dmad_checkpoint (1) (1).pth"
 SMAD_FILE = "Final_efficientnet_smad_finetuned.pth"
+HF_TOKEN = st.secrets["HF_TOKEN"]
 
 # 2. Function to download and return local paths
 def get_model_paths():
+
+    token = st.secrets["HF_TOKEN"] if "HF_TOKEN" in st.secrets else None
     # Downloads and returns the path to the cached file
     enb3_path = hf_hub_download(repo_id=REPO_ID, filename=ENB3_FILE)
     dmad_path = hf_hub_download(repo_id=REPO_ID, filename=DMAD_FILE)
@@ -131,24 +134,6 @@ def resize_fixed(img, size=(300, 400)):
             return img.resize(size, Image.Resampling.LANCZOS)
 
 BASE_DIR = os.path.dirname(__file__) 
-
-import os
-import requests
-
-def download_model():
-    model_path = 'D-MAD/dmad_frll_stage1.pth'
-    url = 'YOUR_DIRECT_DOWNLOAD_LINK_HERE'
-    
-    if not os.path.exists(model_path):
-        print("Downloading model... this may take a minute.")
-        os.makedirs(os.path.dirname(model_path), exist_ok=True)
-        response = requests.get(url, stream=True)
-        with open(model_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        print("Download complete!")
-
-download_model()
 # -------------------------------
 # 🔧 MODEL LOADING (CACHED)
 # -------------------------------
@@ -406,7 +391,7 @@ if st.session_state.page == "Intro":
                 img_path = os.path.join(BASE_DIR, "assets", "SMDD.png")
                 
                 img_smdd = Image.open(img_path)
-                st.image(img_smdd, caption="SMDD Dataset Example", use_container_width=True)    
+                st.image(img_smdd, caption="SMDD Dataset Example", width="stretch")    
 
             st.markdown("#### 🧩 Dataset Characteristics")
             st.markdown("""
@@ -448,7 +433,7 @@ if st.session_state.page == "Intro":
                 img_path = os.path.join(BASE_DIR, "assets", "FEI_differentAngle.png")
                 
                 img_fei = Image.open(img_path)
-                st.image(img_fei, caption="FEI Face Dataset Example", use_container_width=True)    
+                st.image(img_fei, caption="FEI Face Dataset Example", width="stretch")    
 
 
             fei_col1, fei_col2 = st.columns(2)
@@ -488,7 +473,7 @@ if st.session_state.page == "Intro":
                 img_path = os.path.join(BASE_DIR, "assets", "FRLL.png")
                 img_frll = Image.open(img_path)
 
-                st.image(img_frll, caption="FRLL Dataset Example", use_container_width=True) 
+                st.image(img_frll, caption="FRLL Dataset Example", width="stretch") 
 
             frll_col1, frll_col2 = st.columns(2)
 
@@ -526,7 +511,7 @@ if st.session_state.page == "Intro":
             st.subheader("📌 SMDD Dataset")
 
             img_smdd = Image.open(os.path.join(BASE_DIR, "assets", "EDA_SMDD.png"))
-            st.image(img_smdd, use_container_width=True)
+            st.image(img_smdd, width="stretch")
 
             st.markdown("""
             **Observations:**
@@ -541,7 +526,7 @@ if st.session_state.page == "Intro":
             st.subheader("📌 FEI Dataset")
 
             img_fei = Image.open(os.path.join(BASE_DIR, "assets", "EDA_FEI.png"))
-            st.image(img_fei, use_container_width=True)
+            st.image(img_fei, width="stretch")
 
             st.markdown("""
             **Observations:**
@@ -557,7 +542,7 @@ if st.session_state.page == "Intro":
             st.subheader("📌 FRLL Dataset")
 
             img_frll = Image.open(os.path.join(BASE_DIR, "assets", "EDA_FRLL.png"))
-            st.image(img_frll, use_container_width=True)
+            st.image(img_frll, width="stretch")
 
             st.markdown("""
             **Observations:**
@@ -574,7 +559,7 @@ if st.session_state.page == "Intro":
             img_path = os.path.join(BASE_DIR, "assets", "Modelling.png")
             img_frll = Image.open(img_path)
 
-            st.image(img_frll, caption="Modelling Flowchart", use_container_width=True) 
+            st.image(img_frll, caption="Modelling Flowchart", width="stretch") 
 
         col1, col2 = st.columns(2)
 
@@ -926,9 +911,9 @@ if st.session_state.page == "Hybrid":
         #     # Using spacers [left_spacer, img1, img2, right_spacer]
         #     sp1, c1, c2, sp2 = st.columns([1, 2, 2, 1]) 
         #     with c1:
-        #         st.image(img_id, caption="ID Image", use_container_width=True)
+        #         st.image(img_id, caption="ID Image", width="stretch")
         #     with c2:
-        #         st.image(img_selfie, caption="Selfie Image", use_container_width=True)
+        #         st.image(img_selfie, caption="Selfie Image", width="stretch")
 
            
 
