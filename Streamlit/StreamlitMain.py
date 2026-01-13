@@ -300,10 +300,13 @@ if st.session_state.page == "Intro":
 
         with col2:
             st.markdown("### 🎯 Project Objective")
-            st.markdown(
-                "To build a clear and reliable hybrid detection system that combines texture-based morph detection "
-                "(S-MAD) and identity comparison (D-MAD) to effectively prevent face morphing attacks in eKYC systems."
-            )
+           
+            st.markdown("""
+            - **Develop** a deep learning model to detect bona-fide and morphed facial images.  
+            - **Evaluate** the performance of the proposed morphing attack detection model.  
+            - **Implement** a web-based application that integrates the trained model for simulated digital transactions. 
+            """)
+            
         
         st.markdown("### 📘 Key Concepts")
 
